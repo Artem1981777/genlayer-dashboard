@@ -4,7 +4,7 @@ import { getProject } from "@/lib/projects"
 import { useCases } from "@/hooks/use-cases"
 import { StatusDot } from "@/components/status-dot"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts"
-const TONE: Record<string, string> = { ok: "#4fe08b", warn: "#f2cf5b", bad: "#ff7b7b", muted: "#6ea8fe" }
+const TONE: Record<string, string> = { ok: "#4fe08b", warn: "#f2cf5b", bad: "#ff7b7b", muted: "#b6ff6c" }
 export default function Analytics() {
   const { projectId } = useApp()
   const project = getProject(projectId)
@@ -46,7 +46,7 @@ export default function Analytics() {
                 <XAxis dataKey="name" stroke="#94a0ba" fontSize={12} />
                 <YAxis domain={[0, 100]} stroke="#94a0ba" fontSize={12} />
                 <Tooltip contentStyle={{ background: "#141a27", border: "1px solid #232b3d", borderRadius: 12, color: "#eef2f9" }} />
-                <Bar dataKey="confidence" fill="#6ea8fe" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="confidence" fill="#b6ff6c" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

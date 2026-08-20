@@ -13,7 +13,7 @@ export function CasePanel({ project, tc }: { project: ProjectDef; tc?: TrackedCa
   const conf = Number(s.confidence)
   const hasConf = Number.isFinite(conf) && String(s.confidence || "").length > 0
   const tone = project.decisions.find((d) => d.value === String(decision || "").toUpperCase())?.tone || "muted"
-  const toneColor = tone === "ok" ? "#4fe08b" : tone === "bad" ? "#ff7b7b" : tone === "warn" ? "#f2cf5b" : "#6ea8fe"
+  const toneColor = tone === "ok" ? "#4fe08b" : tone === "bad" ? "#ff7b7b" : tone === "warn" ? "#f2cf5b" : "#b6ff6c"
   const hist = parseHistory(s.history)
   return (
     <div className="card">

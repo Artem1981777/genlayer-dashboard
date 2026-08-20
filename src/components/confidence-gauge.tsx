@@ -1,5 +1,5 @@
 "use client"
-export function ConfidenceGauge({ value, size = 132, tone = "#6ea8fe" }: { value: number; size?: number; tone?: string }) {
+export function ConfidenceGauge({ value, size = 132, tone = "#b6ff6c" }: { value: number; size?: number; tone?: string }) {
   const r = (size - 22) / 2
   const c = 2 * Math.PI * r
   const v = Math.max(0, Math.min(100, Number.isFinite(value) ? value : 0))
