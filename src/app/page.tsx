@@ -1,103 +1,79 @@
-import Image from "next/image";
-
-export default function Home() {
+"use client"
+import { useState, useEffect } from "react"
+import { useApp } from "@/components/providers"
+import { getProject } from "@/lib/projects"
+import { useCases } from "@/hooks/use-cases"
+import { KpiCard } from "@/components/kpi-card"
+import { CasePanel } from "@/components/case-panel"
+import { DecisionBadge } from "@/components/verdict-badge"
+import { StatusDot } from "@/components/status-dot"
+import { AddContract } from "@/components/add-contract"
+import { short } from "@/lib/format"
+import { Activity, ShieldAlert, Gauge, ListChecks, RefreshCw } from "lucide-react"
+export default function Overview() {
+  const { projectId } = useApp()
+  const project = getProject(projectId)
+  const { cases, loading, lastSync, refresh } = useCases(projectId)
+  const [selected, setSelected] = useState<string | null>(null)
+  useEffect(() => { setSelected(null) }, [projectId])
+  const field = project.decisionField
+  const decided = cases.filter((c) => c.state && (field === "verdict" ? c.state.verdict : c.state.outcome))
+  const total = cases.length
+  const counts: Record<string, number> = {}
+  for (const c of decided) { const v = String((field === "verdict" ? c.state!.verdict : c.state!.outcome) || "").toUpperCase(); counts[v] = (counts[v] || 0) + 1 }
+  const confVals = cases.map((c) => Number(c.state?.confidence)).filter((n) => Number.isFinite(n))
+  const avgConf = confVals.length ? Math.round(confVals.reduce((a, b) => a + b, 0) / confVals.length) : null
+  const escalated = cases.filter((c) => c.state?.escalated === "true").length
+  const review = cases.filter((c) => c.state?.needs_review === "true").length
+  const online = cases.some((c) => c.state)
+  const selectedCase = cases.find((c) => c.address === selected) || decided[0] || cases[0]
+  const primary = project.decisions[0]?.value
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <>
+      <div className="topbar">
+        <div>
+          <h1 className="h1"><StatusDot tone={online ? "ok" : "bad"} /> {project.name}</h1>
+          <div className="sub">{project.tagline} · {total} tracked case{total === 1 ? "" : "s"}</div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+        <div className="flex gap center">
+          <span className="chip"><span className={"dot" + (online ? "" : " bad")} /> {online ? "Live" : "Offline"} · Bradbury</span>
+          <button className="btn" onClick={refresh}><RefreshCw size={14} /> Refresh</button>
+        </div>
+      </div>
+      <div className="grid kpis">
+        <KpiCard icon={<ListChecks size={14} />} label="Tracked cases" value={loading && !total ? "…" : total} meta={lastSync ? "synced " + new Date(lastSync).toLocaleTimeString() : "syncing…"} />
+        <KpiCard icon={<Activity size={14} />} label={project.decisions.map((d) => d.label).join(" / ")} value={<span className="flex gap wrap">{project.decisions.map((d) => <span key={d.value} className={"badge " + d.tone}>{counts[d.value] || 0}</span>)}</span>} meta={decided.length + " decided of " + total} />
+        {field === "verdict"
+          ? <KpiCard icon={<Gauge size={14} />} label="Avg confidence" value={avgConf === null ? "—" : avgConf + "%"} meta="across tracked cases" />
+          : <KpiCard icon={<Gauge size={14} />} label={primary + " rate"} value={decided.length ? Math.round(((counts[primary] || 0) / decided.length) * 100) + "%" : "—"} meta={(counts[primary] || 0) + " " + primary} />}
+        {field === "verdict"
+          ? <KpiCard icon={<ShieldAlert size={14} />} label="Needs review" value={review} meta={escalated + " escalated"} />
+          : <KpiCard icon={<ShieldAlert size={14} />} label="Decided" value={decided.length} meta={(total - decided.length) + " pending"} />}
+      </div>
+      <div className="split mt">
+        <div className="card">
+          <div className="flex between center wrap gap"><b>Cases</b><AddContract projectId={projectId} onAdded={refresh} /></div>
+          <div className="grid mt" style={{ gap: 10 }}>
+            {loading && !cases.length ? [0, 1, 2].map((i) => <div key={i} className="sk" style={{ height: 60 }} />) : null}
+            {!loading && !cases.length ? <div className="empty"><div className="big">No cases tracked</div>Add a contract address to start.</div> : null}
+            {cases.map((c) => {
+              const dv = field === "verdict" ? c.state?.verdict : c.state?.outcome
+              const isSel = selectedCase?.address === c.address
+              return (
+                <div key={c.address} className={"rowitem" + (isSel ? " active" : "")} onClick={() => setSelected(c.address)}>
+                  <StatusDot tone={c.error ? "bad" : c.state ? "ok" : "warn"} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="mono">{short(c.address, 6)}</div>
+                    <div className="dim" style={{ fontSize: 12 }}>{c.state?.status || (c.error ? "error" : "loading…")}</div>
+                  </div>
+                  <DecisionBadge project={project} value={dv} />
+                </div>
+              )
+            })}
+          </div>
+        </div>
+        <CasePanel project={project} tc={selectedCase} />
+      </div>
+    </>
+  )
 }
