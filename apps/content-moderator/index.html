@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GenLayer ContentModerator — Live</title>
+<style>
+  :root { --bg:#0b0d12; --card:#151922; --mut:#8b93a7; --fg:#e8ecf4; --line:#232937; --accent:#6ea8fe; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family:-apple-system,Segoe UI,Roboto,sans-serif; }
+  .wrap { max-width:820px; margin:0 auto; padding:20px 16px 60px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .sub { color:var(--mut); font-size:13px; margin-bottom:18px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  input { flex:1; min-width:220px; background:#0f131b; border:1px solid var(--line); color:var(--fg); border-radius:10px; padding:10px 12px; font-size:13px; }
+  button { background:var(--accent); color:#08101f; border:0; border-radius:10px; padding:10px 16px; font-weight:600; font-size:14px; }
+  button:disabled { opacity:.5; }
+  .label { color:var(--mut); font-size:12px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
+  .val { font-size:15px; margin-bottom:12px; word-break:break-word; }
+  .badge { display:inline-block; padding:4px 10px; border-radius:999px; font-size:13px; font-weight:700; }
+  .b-approve { background:#123a24; color:#5ee08f; }
+  .b-flag { background:#3a3312; color:#e8cf5e; }
+  .b-remove { background:#3a1a1a; color:#ff8a8a; }
+  .b-grey { background:#22283a; color:#aeb8d0; }
+  .bar { height:10px; border-radius:999px; background:#0f131b; border:1px solid var(--line); overflow:hidden; }
+  .bar > i { display:block; height:100%; background:linear-gradient(90deg,#6ea8fe,#5ee08f); }
+  .hist { border-left:2px solid var(--line); margin-left:6px; padding-left:14px; }
+  .hist .it { margin-bottom:12px; }
+  .mut { color:var(--mut); font-size:12px; }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>ContentModerator — GenLayer Intelligent Contract</h1>
+  <div class="sub">Read-only live view on GenLayer testnet (Bradbury). Self-calibrating AI moderation with confidence, auto-escalation, categories &amp; appeals.</div>
+  <div class="card">
+    <div class="label">Contract address</div>
+    <div class="row">
+      <input id="addr" value="0xbf844361E8d9CD30a11ff4b6Fe7E715413C17fC5" />
+      <button id="load">Load</button>
+    </div>
+    <div id="err" class="mut" style="margin-top:8px;color:#ff8a8a;"></div>
+  </div>
+  <div id="out"></div>
+</div>
+<script type="module">
+import { createClient } from "https://esm.sh/genlayer-js";
+import { testnetBradbury } from "https://esm.sh/genlayer-js/chains";
+
+const client = createClient({ chain: testnetBradbury });
+const byId = (id) => document.getElementById(id);
+const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt !== undefined) e.textContent = txt; return e; };
+
+function verdictBadge(v) {
+  const b = el("span", "badge");
+  const t = String(v || "").toUpperCase();
+  if (t === "APPROVE") { b.className = "badge b-approve"; b.textContent = "APPROVE"; }
+  else if (t === "REMOVE") { b.className = "badge b-remove"; b.textContent = "REMOVE"; }
+  else if (t === "FLAG") { b.className = "badge b-flag"; b.textContent = "FLAG"; }
+  else { b.className = "badge b-grey"; b.textContent = t || "PENDING"; }
+  return b;
+}
+function field(label, text) {
+  const wrap = el("div");
+  wrap.appendChild(el("div", "label", label));
+  wrap.appendChild(el("div", "val", text));
+  return wrap;
+}
+
+async function load() {
+  byId("err").textContent = "";
+  byId("out").innerHTML = "";
+  const address = byId("addr").value.trim();
+  if (!address) { byId("err").textContent = "Enter a contract address."; return; }
+  byId("load").disabled = true;
+  byId("load").textContent = "Loading...";
+  try {
+    const s = await client.readContract({ address, functionName: "get_state", args: [] });
+    render(s);
+  } catch (e) {
+    byId("err").textContent = "Failed to read contract: " + String(e && e.message ? e.message : e);
+  } finally {
+    byId("load").disabled = false;
+    byId("load").textContent = "Load";
+  }
+}
+
+function render(s) {
+  const out = byId("out");
+  const conf = Number(s.confidence);
+  const hasConf = Number.isFinite(conf) && String(s.confidence).length > 0;
+
+  const head = el("div", "card");
+  const hr = el("div", "row");
+  hr.appendChild(verdictBadge(s.verdict));
+  if (hasConf) hr.appendChild(el("span", "badge b-grey", "confidence " + conf + "%"));
+  if (s.category && s.category !== "none") hr.appendChild(el("span", "badge b-grey", s.category));
+  if (s.escalated === "true") hr.appendChild(el("span", "badge b-flag", "escalated"));
+  if (s.needs_review === "true") hr.appendChild(el("span", "badge b-flag", "needs review"));
+  head.appendChild(hr);
+  if (hasConf) {
+    const bar = el("div", "bar"); bar.style.marginTop = "12px";
+    const fill = el("i"); fill.style.width = Math.max(0, Math.min(100, conf)) + "%";
+    bar.appendChild(fill); head.appendChild(bar);
+  }
+  out.appendChild(head);
+
+  const info = el("div", "card");
+  info.appendChild(field("Status", String(s.status || "")));
+  info.appendChild(field("Reason", String(s.reason || "(not moderated yet)")));
+  info.appendChild(field("Community rules", String(s.rules || "")));
+  info.appendChild(field("Content under review", String(s.content || "")));
+  out.appendChild(info);
+
+  let hist = [];
+  try { hist = JSON.parse(s.history || "[]"); } catch (e) { hist = []; }
+  if (hist.length) {
+    const hc = el("div", "card");
+    hc.appendChild(el("div", "label", "Moderation history (" + hist.length + " round" + (hist.length === 1 ? "" : "s") + ")"));
+    const box = el("div", "hist");
+    for (const it of hist) {
+      const item = el("div", "it");
+      const line = el("div", "row");
+      line.appendChild(el("span", "mut", "round " + it.round + " · " + it.kind));
+      line.appendChild(verdictBadge(it.verdict));
+      if (it.confidence !== undefined && String(it.confidence).length) line.appendChild(el("span", "badge b-grey", it.confidence + "%"));
+      if (it.category && it.category !== "none") line.appendChild(el("span", "badge b-grey", it.category));
+      if (it.escalated === "true") line.appendChild(el("span", "badge b-flag", "escalated"));
+      item.appendChild(line);
+      if (it.reason) item.appendChild(el("div", "mut", it.reason));
+      if (it.note) item.appendChild(el("div", "mut", "note: " + it.note));
+      box.appendChild(item);
+    }
+    hc.appendChild(box);
+    out.appendChild(hc);
+  }
+}
+
+byId("load").addEventListener("click", load);
+load();
+</script>
+</body>
+</html>
