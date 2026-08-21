@@ -114,6 +114,16 @@ An Intelligent Contract for binary (YES/NO) prediction markets that resolves out
 
 Repo: https://github.com/Artem1981777/genlayer-prediction-market
 
+## Repository layout
+
+This is a monorepo. The dashboard UI lives at the root; each tracked project's full source is vendored under apps/ via git subtree.
+
+    genlayer-dashboard/
+      src/                      # dashboard UI (Next.js)
+      apps/
+        content-moderator/      # Content Moderator contract + tooling
+        prediction-market/      # Prediction Market contract + tooling
+
 ## Tech stack
 
 Next.js 15 · React 19 · genlayer-js · viem · framer-motion · recharts · sonner · Tailwind CSS 4
