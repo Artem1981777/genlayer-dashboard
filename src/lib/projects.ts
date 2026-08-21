@@ -15,6 +15,7 @@ export const PROJECTS: ProjectDef[] = [
       { value: "REMOVE", label: "Remove", tone: "bad" },
     ],
     seedContracts: [
+      "0x30Bb0bc6dA84d377C339949DDfF2d87539F77EB7",
       "0xbf844361E8d9CD30a11ff4b6Fe7E715413C17fC5",
       "0x237fD615062d9C952659DC357eaA94B8Be1370DC",
     ],
@@ -34,6 +35,7 @@ export const PROJECTS: ProjectDef[] = [
       { value: "UNRESOLVED", label: "Unresolved", tone: "muted" },
     ],
     seedContracts: [
+      "0x86d36795b66c29A7445945585a4C9f09C289C8ba",
       "0x5853abFE0CBF83ac65cd3DACFB35Bb1B0314C969",
       "0xd2Ead3C6BbaCe1D423F156762f33A2C9B406C73f",
     ],

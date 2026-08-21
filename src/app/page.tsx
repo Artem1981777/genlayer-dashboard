@@ -72,7 +72,7 @@ export default function Overview() {
             })}
           </div>
         </div>
-        <CasePanel project={project} tc={selectedCase} />
+        <CasePanel project={project} tc={selectedCase} onRefresh={refresh} />
       </div>
     </>
   )

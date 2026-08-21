@@ -6,7 +6,8 @@ import { DecisionBadge } from "./verdict-badge"
 import { HistoryTimeline } from "./history-timeline"
 import { CopyButton } from "./copy-button"
 import { ExternalLink } from "lucide-react"
-export function CasePanel({ project, tc }: { project: ProjectDef; tc?: TrackedCase }) {
+import { ActionsPanel } from "./actions-panel"
+export function CasePanel({ project, tc, onRefresh }: { project: ProjectDef; tc?: TrackedCase; onRefresh?: () => void }) {
   if (!tc) return <div className="card"><div className="empty"><div className="big">Select a case</div>Pick a contract on the left to inspect it.</div></div>
   const s = tc.state || {}
   const decision = project.decisionField === "verdict" ? s.verdict : s.outcome
@@ -41,6 +42,7 @@ export function CasePanel({ project, tc }: { project: ProjectDef; tc?: TrackedCa
           {(s.rules || s.question) ? <div className="mt"><div className="dim" style={{ fontSize: 12 }}>{project.decisionField === "verdict" ? "Rules" : "Question"}</div><div style={{ fontSize: 13.5 }}>{s.rules || s.question}</div></div> : null}
           {s.content ? <div className="mt"><div className="dim" style={{ fontSize: 12 }}>Content</div><div className="mono" style={{ fontSize: 12.5, maxHeight: 140, overflow: "auto" }}>{s.content}</div></div> : null}
           <div className="mt"><div className="dim" style={{ fontSize: 12 }}>History</div><HistoryTimeline project={project} items={hist} /></div>
+          <ActionsPanel projectId={project.id} address={tc.address} onDone={onRefresh} />
         </>
       )}
     </div>

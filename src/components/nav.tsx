@@ -5,6 +5,7 @@ import { useState } from "react"
 import { PROJECTS } from "@/lib/projects"
 import { useApp } from "./providers"
 import { LayoutDashboard, BarChart3, ShieldCheck, TrendingUp, Menu, X, Plus } from "lucide-react"
+import { WalletButton } from "./wallet-button"
 const ICONS: Record<string, any> = { ShieldCheck, TrendingUp }
 export function Sidebar() {
   const { projectId, setProjectId, mode, setMode } = useApp()
@@ -37,6 +38,7 @@ export function Sidebar() {
         <Link href="/" className={"navlink" + (path === "/" ? " active" : "")}><LayoutDashboard size={16} /> Overview</Link>
         <Link href="/analytics" className={"navlink" + (path === "/analytics" ? " active" : "")}><BarChart3 size={16} /> Analytics</Link>
         <div className="side-foot">
+          <WalletButton />
           <div className="toggle">
             <button className={mode === "live" ? "on" : ""} onClick={() => setMode("live")}>Live</button>
             <button className={mode === "demo" ? "on" : ""} onClick={() => setMode("demo")}>Demo</button>
