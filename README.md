@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ◆ GenLayer Builder Dashboard
 
-## Getting Started
+One dashboard to track, operate, and **prove** GenLayer Intelligent Contracts — live on Testnet Bradbury (chain 4221).
 
-First, run the development server:
+**Live:** https://artem1981777.github.io/genlayer-dashboard/
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## What it is
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+A control room for my GenLayer builder projects. It reads on-chain contract state in real time and lets you run contract actions straight from the browser with any injected wallet — no CLI needed.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Projects tracked
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Project | What it does | Repo | Latest contract |
+| --- | --- | --- | --- |
+| Content Moderator | Self-calibrating AI content moderation with appeals | https://github.com/Artem1981777/genlayer-content-moderator | [0x30Bb…7EB7](https://explorer-bradbury.genlayer.com/address/0x30Bb0bc6dA84d377C339949DDfF2d87539F77EB7) |
+| Prediction Market | Web-evidenced resolver with disputes | https://github.com/Artem1981777/genlayer-prediction-market | [0x86d3…C8ba](https://explorer-bradbury.genlayer.com/address/0x86d36795b66c29A7445945585a4C9f09C289C8ba) |
 
-## Learn More
+## Features
 
-To learn more about Next.js, take a look at the following resources:
+- Multi-wallet Connect via EIP-6963 — OKX, Rabby, MetaMask, Coinbase, Trust, and any injected provider
+- Auto network handling — switches to GenLayer Bradbury (4221) and auto-adds it if missing
+- Wrong-network protection — every write re-checks chainId and blocks accidental tx on other networks
+- Live state — polls get_state and renders decisions, confidence, and history
+- Actions from the UI — moderate, enforce, appeal, resolve, settle, stake, claim, and more, with toasts and Explorer links
+- Analytics view with charts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Live proof — real on-chain actions from the UI
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Every transaction below was executed **from the dashboard UI**, signed by an **external wallet** `0xdc67…7FBD` (not the deploy key) — exactly how a judge would use it. All finalized by GenLayer consensus (5/5 validators revealed, result=1).
 
-## Deploy on Vercel
+| # | Action | Contract | Transaction |
+| --- | --- | --- | --- |
+| 1 | moderate | Content Moderator | [0x74b242…f982a](https://explorer-bradbury.genlayer.com/tx/0x74b242b3292f2a190db8420ffc416baf30287e70426cd59f9db51976945f982a) |
+| 2 | enforce | Content Moderator | [0xcc6da1…dfbb11](https://explorer-bradbury.genlayer.com/tx/0xcc6da1a9e48ee011eade9314bfba187ebe5e51f671df5d2b71df70a935dfbb11) |
+| 3 | resolve_appeal | Content Moderator | [0xfd102a…c7c03f](https://explorer-bradbury.genlayer.com/tx/0xfd102a321ec860f88d5443db1f3cf36b9423fc0373a6e3dbacc704ce5ac7c03f) |
+| 4 | stake (YES) | Prediction Market | [0x3acd32…2429e0](https://explorer-bradbury.genlayer.com/tx/0x3acd32b5f1f3b3afaedb13e10f431b241e980c91d533120ed71f63165d2429e0) |
+| 5 | resolve | Content Moderator | [0x00716c…377dbf](https://explorer-bradbury.genlayer.com/tx/0x00716c8057deb4a6b8a0aad4ee2fa9a34a326956193c24bd7242ca6265377dbf) |
+| 6 | settle | Content Moderator | [0xe4a295…3069c](https://explorer-bradbury.genlayer.com/tx/0xe4a295ce8175d5fdfa20c4993e780068c137b375c9e232eef0880c24abe3069c) |
+| 7 | claim | Prediction Market | [0x7ec391…0c2e26](https://explorer-bradbury.genlayer.com/tx/0x7ec3910212f62e8f9b2f76d749c0a70f9ba7d4220d6de09e11e46d02e70c2e26) |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Tech stack
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Next.js 15 · React 19 · genlayer-js · viem · framer-motion · recharts · sonner · Tailwind CSS 4
+
+## Run locally
+
+    npm install
+    npm run dev
+
+Then open http://localhost:3000/genlayer-dashboard/
+
+## Deploy (GitHub Pages)
+
+    npm run build
+
+Publish the static out/ folder to the gh-pages branch.
+
+## Network — GenLayer Testnet Bradbury
+
+- Chain ID: 4221 (0x107d)
+- RPC: https://rpc-bradbury.genlayer.com
+- Explorer: https://explorer-bradbury.genlayer.com
+- Faucet: https://testnet-faucet.genlayer.foundation
+
+---
+
+Built by Artem1981777 for the GenLayer Foundation Builder track.
