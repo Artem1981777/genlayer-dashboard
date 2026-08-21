@@ -12,8 +12,8 @@ A control room for my GenLayer builder projects. It reads on-chain contract stat
 
 | Project | What it does | Repo | Latest contract |
 | --- | --- | --- | --- |
-| Content Moderator | Self-calibrating AI content moderation with appeals | https://github.com/Artem1981777/genlayer-content-moderator | [0x30Bb…7EB7](https://explorer-bradbury.genlayer.com/address/0x30Bb0bc6dA84d377C339949DDfF2d87539F77EB7) |
-| Prediction Market | Web-evidenced resolver with disputes | https://github.com/Artem1981777/genlayer-prediction-market | [0x86d3…C8ba](https://explorer-bradbury.genlayer.com/address/0x86d36795b66c29A7445945585a4C9f09C289C8ba) |
+| Content Moderator | Self-calibrating AI content moderation with appeals | [repo](https://github.com/Artem1981777/genlayer-content-moderator) · [apps/content-moderator](https://github.com/Artem1981777/genlayer-dashboard/tree/main/apps/content-moderator) | [0x30Bb…7EB7](https://explorer-bradbury.genlayer.com/address/0x30Bb0bc6dA84d377C339949DDfF2d87539F77EB7) |
+| Prediction Market | Web-evidenced resolver with disputes | [repo](https://github.com/Artem1981777/genlayer-prediction-market) · [apps/prediction-market](https://github.com/Artem1981777/genlayer-dashboard/tree/main/apps/prediction-market) | [0x86d3…C8ba](https://explorer-bradbury.genlayer.com/address/0x86d36795b66c29A7445945585a4C9f09C289C8ba) |
 
 ## Features
 
