@@ -1,12 +1,12 @@
 # ◆ GenLayer Builder Dashboard
 
-One dashboard to track, operate, and **prove** GenLayer Intelligent Contracts — live on Testnet Bradbury (chain 4221).
+One dashboard to track, operate, and **prove** GenLayer Intelligent Contracts — live on Testnet Bradbury (chain 4221). Two builder projects, one UI.
 
 **Live:** https://artem1981777.github.io/genlayer-dashboard/
 
 ## What it is
 
-A control room for my GenLayer builder projects. It reads on-chain contract state in real time and lets you run contract actions straight from the browser with any injected wallet — no CLI needed.
+A control room for my GenLayer builder projects. It reads on-chain contract state in real time and lets you run contract actions straight from the browser with any injected wallet — no CLI needed. Both projects below are tracked and operated from this single interface.
 
 ## Projects tracked
 
@@ -37,6 +37,82 @@ Every transaction below was executed **from the dashboard UI**, signed by an **e
 | 5 | resolve | Content Moderator | [0x00716c…377dbf](https://explorer-bradbury.genlayer.com/tx/0x00716c8057deb4a6b8a0aad4ee2fa9a34a326956193c24bd7242ca6265377dbf) |
 | 6 | settle | Content Moderator | [0xe4a295…3069c](https://explorer-bradbury.genlayer.com/tx/0xe4a295ce8175d5fdfa20c4993e780068c137b375c9e232eef0880c24abe3069c) |
 | 7 | claim | Prediction Market | [0x7ec391…0c2e26](https://explorer-bradbury.genlayer.com/tx/0x7ec3910212f62e8f9b2f76d749c0a70f9ba7d4220d6de09e11e46d02e70c2e26) |
+
+## The projects in depth
+
+### 1. Content Moderator — self-calibrating AI moderation
+
+An Intelligent Contract that judges user content against a natural-language rules policy using GenLayer's LLM-powered validators. It returns a verdict — Approve, Flag, or Remove — with a confidence score and a written rationale, and supports a full appeal loop so decisions can be re-examined on-chain.
+
+**How the contract works**
+
+- `set_content` — store the content and the rules policy to be evaluated
+- `moderate` — validators read the content, apply the rules, and reach consensus on a verdict + confidence
+- `enforce` — apply the moderation outcome as the contract's active state
+- `appeal(note)` — submit a reasoned appeal against the current verdict
+- `resolve_appeal` — validators re-evaluate the case in light of the appeal and finalize
+- Views: `read_content`, `verify_content`, `get_state`
+
+**Lifecycle**
+
+1. `set_content` (content + rules)
+2. `moderate` → verdict + confidence + rationale
+3. `enforce` the outcome
+4. `appeal(note)` if contested
+5. `resolve_appeal` → final decision
+
+**Deployments (Bradbury)**
+
+| Version | Address |
+| --- | --- |
+| v0.4.0 (latest) | [0x30Bb0bc6…F77EB7](https://explorer-bradbury.genlayer.com/address/0x30Bb0bc6dA84d377C339949DDfF2d87539F77EB7) |
+| v0.3.0 | [0xbf844361…C17fC5](https://explorer-bradbury.genlayer.com/address/0xbf844361E8d9CD30a11ff4b6Fe7E715413C17fC5) |
+| v0.2.0 | [0xDB04fa7B…0D7C64](https://explorer-bradbury.genlayer.com/address/0xDB04fa7B220F34D222168f8708bCb350300D7C64) |
+| v0.1.0 | [0x237fD615…1370DC](https://explorer-bradbury.genlayer.com/address/0x237fD615062d9C952659DC357eaA94B8Be1370DC) |
+
+**On-chain evidence:** moderate, enforce, resolve_appeal, resolve, and settle — see rows 1, 2, 3, 5, 6 in the Live proof table above.
+
+Repo: https://github.com/Artem1981777/genlayer-content-moderator · Demo: https://artem1981777.github.io/genlayer-content-moderator/
+
+### 2. Prediction Market — web-evidenced resolver with disputes
+
+An Intelligent Contract for binary (YES/NO) prediction markets that resolves outcomes from real web evidence. Validators fetch and agree on sources, participants stake on either side, and a dispute path lets a wrong resolution be challenged before settlement and payout.
+
+**How the contract works**
+
+- `add_source` — attach a web source used as evidence for resolution
+- `stake(side, amount)` — stake on YES or NO with an integer amount
+- `resolve()` — validators read the sources and agree on the outcome
+- `dispute(reason)` — challenge the resolved outcome with a reason
+- `resolve_dispute()` — creator finalizes the disputed outcome
+- `settle()` — creator locks the final outcome for payouts
+- `claim()` — winning stakers claim their payout
+- Views: `get_state`, `verify_question`, `verify_rules`
+
+**Lifecycle**
+
+1. Deploy with a market question + rules
+2. `add_source` (evidence)
+3. `stake` YES / NO
+4. `resolve` → outcome from web evidence
+5. `dispute(reason)` → `resolve_dispute` (if challenged)
+6. `settle` → `claim`
+
+**Deployments (Bradbury)**
+
+| Version | Address |
+| --- | --- |
+| v0.3.0 (latest) | [0x86d36795…C289C8ba](https://explorer-bradbury.genlayer.com/address/0x86d36795b66c29A7445945585a4C9f09C289C8ba) |
+| v0.2.0 | [0x5853abFE…0314C969](https://explorer-bradbury.genlayer.com/address/0x5853abFE0CBF83ac65cd3DACFB35Bb1B0314C969) |
+
+**On-chain evidence**
+
+- stake (YES) — [0x3acd32…2429e0](https://explorer-bradbury.genlayer.com/tx/0x3acd32b5f1f3b3afaedb13e10f431b241e980c91d533120ed71f63165d2429e0)
+- claim — [0x7ec391…0c2e26](https://explorer-bradbury.genlayer.com/tx/0x7ec3910212f62e8f9b2f76d749c0a70f9ba7d4220d6de09e11e46d02e70c2e26)
+- resolve (outcome YES) — [0x1fb267…d3200](https://explorer-bradbury.genlayer.com/tx/0x1fb267f316feb19911b363e1baef11cb32238746b42974cc16b509b47e0d3200)
+- dispute — [0x666d9f…9db3c9](https://explorer-bradbury.genlayer.com/tx/0x666d9f1344a6177d3dbadff00b6cc75bbd0dad5b9197b041596d59b1b79db3c9)
+
+Repo: https://github.com/Artem1981777/genlayer-prediction-market
 
 ## Tech stack
 
