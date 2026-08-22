@@ -12,8 +12,8 @@ A control room for my GenLayer builder projects. It reads on-chain contract stat
 
 | Project | What it does | Repo | Latest contract |
 | --- | --- | --- | --- |
-| Content Moderator | Self-calibrating AI content moderation with appeals | [repo](https://github.com/Artem1981777/genlayer-content-moderator) · [apps/content-moderator](https://github.com/Artem1981777/genlayer-dashboard/tree/main/apps/content-moderator) | [0x30Bb…7EB7](https://explorer-bradbury.genlayer.com/address/0x30Bb0bc6dA84d377C339949DDfF2d87539F77EB7) |
-| Prediction Market | Web-evidenced resolver with disputes | [repo](https://github.com/Artem1981777/genlayer-prediction-market) · [apps/prediction-market](https://github.com/Artem1981777/genlayer-dashboard/tree/main/apps/prediction-market) | [0x86d3…C8ba](https://explorer-bradbury.genlayer.com/address/0x86d36795b66c29A7445945585a4C9f09C289C8ba) |
+| Content Moderator | Self-calibrating AI content moderation with appeals | [repo](https://github.com/Artem1981777/genlayer-content-moderator) · [apps/content-moderator](https://github.com/Artem1981777/genlayer-dashboard/tree/main/apps/content-moderator) | [0x235F…24F9](https://explorer-bradbury.genlayer.com/address/0x235F51b11b9F96d6673df37553Ef58373c4324F9) |
+| Prediction Market | Web-evidenced resolver with disputes | [repo](https://github.com/Artem1981777/genlayer-prediction-market) · [apps/prediction-market](https://github.com/Artem1981777/genlayer-dashboard/tree/main/apps/prediction-market) | [0x72f6…3914](https://explorer-bradbury.genlayer.com/address/0x72f6BE503a8319A40515641536C1d74378623914) |
 
 ## Features
 
@@ -65,7 +65,8 @@ An Intelligent Contract that judges user content against a natural-language rule
 
 | Version | Address |
 | --- | --- |
-| v0.4.0 (latest) | [0x30Bb0bc6…F77EB7](https://explorer-bradbury.genlayer.com/address/0x30Bb0bc6dA84d377C339949DDfF2d87539F77EB7) |
+| v0.5.0 (latest) | [0x235F51b1…4324F9](https://explorer-bradbury.genlayer.com/address/0x235F51b11b9F96d6673df37553Ef58373c4324F9) |
+| v0.4.0 | [0x30Bb0bc6…F77EB7](https://explorer-bradbury.genlayer.com/address/0x30Bb0bc6dA84d377C339949DDfF2d87539F77EB7) |
 | v0.3.0 | [0xbf844361…C17fC5](https://explorer-bradbury.genlayer.com/address/0xbf844361E8d9CD30a11ff4b6Fe7E715413C17fC5) |
 | v0.2.0 | [0xDB04fa7B…0D7C64](https://explorer-bradbury.genlayer.com/address/0xDB04fa7B220F34D222168f8708bCb350300D7C64) |
 | v0.1.0 | [0x237fD615…1370DC](https://explorer-bradbury.genlayer.com/address/0x237fD615062d9C952659DC357eaA94B8Be1370DC) |
@@ -102,7 +103,8 @@ An Intelligent Contract for binary (YES/NO) prediction markets that resolves out
 
 | Version | Address |
 | --- | --- |
-| v0.3.0 (latest) | [0x86d36795…C289C8ba](https://explorer-bradbury.genlayer.com/address/0x86d36795b66c29A7445945585a4C9f09C289C8ba) |
+| v0.4.0 (latest) | [0x72f6BE50…623914](https://explorer-bradbury.genlayer.com/address/0x72f6BE503a8319A40515641536C1d74378623914) |
+| v0.3.0 | [0x86d36795…C289C8ba](https://explorer-bradbury.genlayer.com/address/0x86d36795b66c29A7445945585a4C9f09C289C8ba) |
 | v0.2.0 | [0x5853abFE…0314C969](https://explorer-bradbury.genlayer.com/address/0x5853abFE0CBF83ac65cd3DACFB35Bb1B0314C969) |
 
 **On-chain evidence**
