@@ -46,20 +46,22 @@ An Intelligent Contract that judges user content against a natural-language rule
 
 **How the contract works**
 
-- `set_content` — store the content and the rules policy to be evaluated
+- `ingest(url)` — fetch the live page at the URL under consensus and store it as the content to moderate (author = tx signer); the rules policy is set at deploy
 - `moderate` — validators read the content, apply the rules, and reach consensus on a verdict + confidence
 - `enforce` — apply the moderation outcome as the contract's active state
 - `appeal(note)` — submit a reasoned appeal against the current verdict
 - `resolve_appeal` — validators re-evaluate the case in light of the appeal and finalize
+- `reverify_source` — re-fetch the source URL and confirm the stored content still matches
 - Views: `read_content`, `verify_content`, `get_state`
 
 **Lifecycle**
 
-1. `set_content` (content + rules)
-2. `moderate` → verdict + confidence + rationale
-3. `enforce` the outcome
-4. `appeal(note)` if contested
-5. `resolve_appeal` → final decision
+1. Deploy with a rules policy
+2. `ingest(url)` → fetch + store the live content
+3. `moderate` → verdict + confidence + rationale
+4. `enforce` the outcome
+5. `appeal(note)` if contested
+6. `resolve_appeal` → final decision
 
 **Deployments (Bradbury)**
 
