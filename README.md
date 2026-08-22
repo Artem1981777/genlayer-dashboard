@@ -155,3 +155,9 @@ Publish the static out/ folder to the gh-pages branch.
 ---
 
 Built by Artem1981777 for the GenLayer Foundation Builder track.
+
+## v0.6.0 — Content Moderator upgrade
+
+- Multi-axis verdict with per-category axis_scores, severity, and prompt-injection detection.
+- Staked appeals: fund_pool, appeal (author stakes GEN), resolve_appeal (refund+bonus on overturn, forfeit on uphold).
+- Live v0.6.0 contract with full on-chain lifecycle: 0x16C0747A98dCa576Fd1A495DD5FA2be0E1333192 (Bradbury).
