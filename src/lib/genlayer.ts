@@ -1,14 +1,15 @@
 import { createClient } from "genlayer-js"
 import { testnetBradbury } from "genlayer-js/chains"
 import { TransactionStatus } from "genlayer-js/types"
-
 let _read: any = null
 function readClient() {
   if (!_read) _read = createClient({ chain: testnetBradbury as any })
   return _read
 }
 export async function readState(address: string): Promise<any> {
-  return readClient().readContract({ address, functionName: "get_state", args: [] })
+  const p = readClient().readContract({ address, functionName: "get_state", args: [] })
+  const t = new Promise((_r, rej) => setTimeout(() => rej(new Error("read timeout")), 15000))
+  return Promise.race([p, t])
 }
 export function makeWriteClient(account: string, provider: any) {
   return createClient({ chain: testnetBradbury as any, account: account as any, provider })
