@@ -8,6 +8,7 @@ import { CasePanel } from "@/components/case-panel"
 import { DecisionBadge } from "@/components/verdict-badge"
 import { StatusDot } from "@/components/status-dot"
 import { AddContract } from "@/components/add-contract"
+import { OracleOverview } from "@/components/oracle-overview"
 import { short } from "@/lib/format"
 import { Activity, ShieldAlert, Gauge, ListChecks, RefreshCw } from "lucide-react"
 export default function Overview() {
@@ -16,6 +17,7 @@ export default function Overview() {
   const { cases, loading, lastSync, refresh } = useCases(projectId)
   const [selected, setSelected] = useState<string | null>(null)
   useEffect(() => { setSelected(null) }, [projectId])
+  if (project.kind === "oracle") return <OracleOverview project={project} cases={cases} loading={loading} lastSync={lastSync} refresh={refresh} />
   const field = project.decisionField
   const decided = cases.filter((c) => c.state && (field === "verdict" ? c.state.verdict : c.state.outcome))
   const total = cases.length

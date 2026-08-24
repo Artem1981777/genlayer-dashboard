@@ -1,4 +1,4 @@
-export type ProjectId = "moderator" | "prediction"
+export type ProjectId = "moderator" | "prediction" | "oracle"
 export type Tone = "ok" | "warn" | "bad" | "muted"
 export type HistoryItem = {
   round?: number; kind?: string; by?: string; note?: string
@@ -12,5 +12,5 @@ export type Decision = { value: string; label: string; tone: Tone }
 export type ProjectDef = {
   id: ProjectId; name: string; tagline: string; icon: string; accent: string
   repo: string; demo: string; decisionField: "verdict" | "outcome"
-  decisions: Decision[]; seedContracts: string[]
+  decisions: Decision[]; seedContracts: string[]; kind?: "case" | "oracle"
 }

@@ -43,5 +43,17 @@ export const PROJECTS: ProjectDef[] = [
       
     ],
   },
+  {
+    id: "oracle", kind: "oracle",
+    name: "Multi-Source Oracle",
+    tagline: "Median-consensus price feeds",
+    icon: "Radio",
+    accent: "#5ad1ff",
+    repo: "https://github.com/Artem1981777/genlayer-multi-source-oracle",
+    demo: "https://explorer-bradbury.genlayer.com/address/0x9a87961693FF753de5AeBcfD72D861BD21C9d0A4",
+    decisionField: "verdict",
+    decisions: [],
+    seedContracts: ["0x9a87961693FF753de5AeBcfD72D861BD21C9d0A4"],
+  },
 ]
 export const getProject = (id: string) => PROJECTS.find((p) => p.id === id) || PROJECTS[0]

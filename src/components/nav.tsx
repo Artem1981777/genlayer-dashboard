@@ -4,9 +4,9 @@ import { usePathname } from "next/navigation"
 import { useState } from "react"
 import { PROJECTS } from "@/lib/projects"
 import { useApp } from "./providers"
-import { LayoutDashboard, BarChart3, ShieldCheck, TrendingUp, Menu, X, Plus } from "lucide-react"
+import { LayoutDashboard, BarChart3, ShieldCheck, TrendingUp, Menu, X, Plus, Radio } from "lucide-react"
 import { WalletButton } from "./wallet-button"
-const ICONS: Record<string, any> = { ShieldCheck, TrendingUp }
+const ICONS: Record<string, any> = { ShieldCheck, TrendingUp, Radio }
 export function Sidebar() {
   const { projectId, setProjectId, mode, setMode } = useApp()
   const path = usePathname()
