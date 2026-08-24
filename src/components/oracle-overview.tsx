@@ -2,6 +2,7 @@
 import { ProjectDef, TrackedCase } from "@/lib/types"
 import { KpiCard } from "./kpi-card"
 import { StatusDot } from "./status-dot"
+import { ActionsPanel } from "./actions-panel"
 import { short, addrUrl } from "@/lib/format"
 import { RefreshCw, Database, Layers, Gauge, ListChecks, ExternalLink } from "lucide-react"
 function parseJson(x: any) { try { return typeof x === "string" ? JSON.parse(x) : (x || null) } catch { return null } }
@@ -33,7 +34,8 @@ export function OracleOverview({ project, cases, loading, lastSync, refresh }: {
         <KpiCard icon={<Gauge size={14} />} label="Published values" value={valued} meta={valued ? "on-chain medians" : "awaiting consensus"} />
         <KpiCard icon={<ListChecks size={14} />} label="Owner" value={s.owner ? short(s.owner, 4) : "—"} meta="feed admin" />
       </div>
-      <div className="split mt">
+      {tc ? <div className="card mt"><div className="flex between center"><b>Trigger on-chain consensus</b><span className="dim" style={{ fontSize: 11.5 }}>public update(key)</span></div><ActionsPanel projectId="oracle" address={tc.address} onDone={refresh} /></div> : null}
+<div className="split mt">
         <div className="card">
           <div className="flex between center wrap gap"><b>Feeds</b>{tc ? <a className="tag mono" href={addrUrl(tc.address)} target="_blank" rel="noreferrer">{short(tc.address, 6)} <ExternalLink size={12} /></a> : null}</div>
           <div className="grid mt" style={{ gap: 10 }}>

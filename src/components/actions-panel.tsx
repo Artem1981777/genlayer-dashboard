@@ -22,6 +22,9 @@ const ACTIONS: Record<string, ActionDef[]> = {
     { fn: "appeal", label: "Appeal", tone: "warn", fields: [ { key: "note", label: "Note", type: "text", placeholder: "Why you disagree with the verdict" } ], build: (v) => [v.note || ""] },
     { fn: "resolve_appeal", label: "Resolve appeal" },
   ],
+  oracle: [
+    { fn: "update", label: "Update feed", tone: "ok", fields: [ { key: "key", label: "Feed key", type: "text", placeholder: "btc_usd" } ], build: (v) => [v.key || "btc_usd"] },
+  ],
 }
 export function ActionsPanel({ projectId, address, onDone }: { projectId: string; address: string; onDone?: () => void }) {
   const { address: acct, active, wrongNetwork, writeClient, ensureNetwork } = useWallet()
