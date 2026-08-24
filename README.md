@@ -161,3 +161,36 @@ Built by Artem1981777 for the GenLayer Foundation Builder track.
 - Multi-axis verdict with per-category axis_scores, severity, and prompt-injection detection.
 - Staked appeals: fund_pool, appeal (author stakes GEN), resolve_appeal (refund+bonus on overturn, forfeit on uphold).
 - Live v0.6.0 contract with full on-chain lifecycle: 0x16C0747A98dCa576Fd1A495DD5FA2be0E1333192 (Bradbury).
+
+
+---
+
+## Submission Evidence — Project: GenLayer Consensus Console (dashboard)
+
+Portal submission #710849D6-D48E-46C7-96F4-5BB92C4F5CFC · Pending review · Category: Projects (Builder)
+
+### Final evidence set (correct)
+- GitHub Repo: https://github.com/Artem1981777/genlayer-dashboard
+- Live demo: https://artem1981777.github.io/genlayer-dashboard/
+- Contract — Content Moderator: https://explorer-bradbury.genlayer.com/address/0x235F51b11b9F96d6673df37553Ef58373c4324F9
+- Contract — Prediction Market: https://explorer-bradbury.genlayer.com/address/0x72f6BE503a8319A40515641536C1d74378623914
+- Contract — Multi-Source Oracle: https://explorer-bradbury.genlayer.com/address/0x9a87961693FF753de5AeBcfD72D861BD21C9d0A4
+- Live proof tx (Update feed from UI): https://explorer-bradbury.genlayer.com/tx/0xab8bc4c61ba1786edb2ee3d43e048412bcdc52aafc4efc17c35d67f72c1a5676
+
+### Accepted by portal
+- https://github.com/Artem1981777/genlayer-dashboard
+- https://explorer-bradbury.genlayer.com/address/0x72f6BE503a8319A40515641536C1d74378623914
+- https://explorer-bradbury.genlayer.com/tx/0xab8bc4c61ba1786edb2ee3d43e048412bcdc52aafc4efc17c35d67f72c1a5676
+
+### To add
+- https://explorer-bradbury.genlayer.com/address/0x235F51b11b9F96d6673df37553Ef58373c4324F9 (moderator — type GenLayer Explorer Contract)
+- https://explorer-bradbury.genlayer.com/address/0x9a87961693FF753de5AeBcfD72D861BD21C9d0A4 (oracle — type GenLayer Explorer Contract)
+- https://artem1981777.github.io/genlayer-dashboard/ (live — type URL LINK)
+
+### Remove (belongs to escrow, different project)
+- https://explorer-bradbury.genlayer.com/tx/0x8587b750b2ddb3f81efd886c66d14d131128f78339397e1eeba3f2dc68f00fbf
+- https://explorer-bradbury.genlayer.com/tx/0xb81bb8aef18cab6fb90a465ba2eff1d0dae9edcc53b9ee4963de912f622da675 (added twice)
+- https://explorer-bradbury.genlayer.com/address/0x679f4657d126Aa973A070E59654b6B8c37EaA7c0
+
+### Rejected by portal
+- https://github.com/Artem1981777/genlayer-escrow-dapp — "This URL has already been submitted" (escrow repo already used earlier)
