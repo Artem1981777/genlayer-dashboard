@@ -34,7 +34,7 @@ export function OracleOverview({ project, cases, loading, lastSync, refresh }: {
         <KpiCard icon={<Gauge size={14} />} label="Published values" value={valued} meta={valued ? "on-chain medians" : "awaiting consensus"} />
         <KpiCard icon={<ListChecks size={14} />} label="Owner" value={s.owner ? short(s.owner, 4) : "—"} meta="feed admin" />
       </div>
-      {tc ? <div className="card mt"><div className="flex between center"><b>Trigger on-chain consensus</b><span className="dim" style={{ fontSize: 11.5 }}>public update(key)</span></div><ActionsPanel projectId="oracle" address={tc.address} onDone={refresh} /></div> : null}
+      {tc ? <div className="card mt"><div className="flex between center"><b>Trigger on-chain consensus</b><span className="dim" style={{ fontSize: 11.5 }}>public update(key)</span></div><ActionsPanel projectId="oracle" address={tc.address} onDone={refresh} state={s} /></div> : null}
 <div className="split mt">
         <div className="card">
           <div className="flex between center wrap gap"><b>Feeds</b>{tc ? <a className="tag mono" href={addrUrl(tc.address)} target="_blank" rel="noreferrer">{short(tc.address, 6)} <ExternalLink size={12} /></a> : null}</div>
