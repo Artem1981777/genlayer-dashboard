@@ -39,10 +39,10 @@ export function ActionsPanel({ projectId, address, onDone }: { projectId: string
     const client = makeWriteClient(acct, active.provider)
     const args = a.build ? a.build(form) : []
     setBusy(a.fn)
-    const tid = toast.loading(a.label + " \u2014 submitting\u2026")
+    const tid = toast.loading(a.label + " \u2014 awaiting consensus\u2026")
     try {
       const hash = await sendWrite(client, address, a.fn, args)
-      toast.success(a.label + " sent", { id: tid, description: short(hash, 8), action: { label: "Explorer", onClick: () => window.open(txUrl(hash), "_blank") } })
+      toast.success(a.label + " confirmed", { id: tid, description: short(hash, 8), action: { label: "Explorer", onClick: () => window.open(txUrl(hash), "_blank") } })
       setOpenFn(null); setForm({})
       if (onDone) onDone()
     } catch (e: any) {

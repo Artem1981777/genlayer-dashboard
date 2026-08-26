@@ -7,7 +7,7 @@ function readClient() {
   return _read
 }
 export async function readState(address: string): Promise<any> {
-  const p = readClient().readContract({ address, functionName: "get_state", args: [] })
+  const p = readClient().readContract({ address, functionName: "get_state", args: [], stateStatus: "accepted" })
   const t = new Promise((_r, rej) => setTimeout(() => rej(new Error("read timeout")), 15000))
   return Promise.race([p, t])
 }
@@ -20,7 +20,7 @@ function retriable(m: string) {
 export async function sendWrite(client: any, address: string, functionName: string, args: any[] = []): Promise<string> {
   try {
     const hash = (await client.writeContract({ address, functionName, args, value: 0 })) as string
-    client.waitForTransactionReceipt({ hash, status: TransactionStatus.ACCEPTED, retries: 200 }).catch(() => {})
+    const receipt: any = await client.waitForTransactionReceipt({ hash, status: TransactionStatus.ACCEPTED, interval: 5000, retries: 200, fullTransaction: true }); const rn = String((receipt && (receipt.txExecutionResultName || receipt.execution_result)) || ""); if (rn && !rn.toUpperCase().includes("FINISHED")) throw new Error("Consensus accepted but execution failed: " + rn)
     return hash
   } catch (e: any) {
     const msg = String(e && e.message ? e.message : e)
