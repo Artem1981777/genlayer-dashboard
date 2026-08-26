@@ -194,3 +194,33 @@ Portal submission #710849D6-D48E-46C7-96F4-5BB92C4F5CFC · Pending review · Cat
 
 ### Rejected by portal
 - https://github.com/Artem1981777/genlayer-escrow-dapp — "This URL has already been submitted" (escrow repo already used earlier)
+
+
+## Steward Review — Fixes (Aug 26, 2026)
+
+Submission #710849 (Projects · Builder). Steward Pavel Kolosov requested two changes; both addressed and redeployed.
+
+### 1. Accepted-receipt lifecycle
+The write path now awaits and verifies an accepted receipt before refreshing state: `writeContract` -> `await waitForTransactionReceipt(status = ACCEPTED)` -> verify `txExecutionResult` (FINISHED) -> only then re-read `get_state` (`stateStatus = "accepted"`). Implemented in `src/lib/genlayer.ts` (`sendWrite`, `readState`) and live in the deployed app.
+
+### 2. Contract source for every advertised action
+Each advertised action maps to a real method on the deployed contract, verified on-chain via `readContract`:
+
+- Oracle `0x9a87961693FF753de5AeBcfD72D861BD21C9d0A4` -> `update`
+- Prediction `0x72f6BE503a8319A40515641536C1d74378623914` -> `stake, resolve, dispute, resolve_dispute, settle, claim`
+- Moderator `0x235F51b11b9F96d6673df37553Ef58373c4324F9` -> `moderate, enforce, appeal, resolve_appeal`
+
+### Evidence links
+Contract sources (in this repo):
+
+- Oracle: https://github.com/Artem1981777/genlayer-dashboard/blob/main/apps/multi-source-oracle/contracts/oracle.py
+- Prediction: https://github.com/Artem1981777/genlayer-dashboard/blob/main/apps/prediction-market/contracts/prediction_market.py
+- Moderator: https://github.com/Artem1981777/genlayer-dashboard/blob/main/apps/content-moderator/contracts/moderator.py
+
+On-chain & app:
+
+- Live app: https://artem1981777.github.io/genlayer-dashboard/
+- Prediction contract (explorer): https://explorer-bradbury.genlayer.com/address/0x72f6BE503a8319A40515641536C1d74378623914
+- Oracle `update` tx: https://explorer-bradbury.genlayer.com/tx/0xab8bc4c61ba1786edb2ee3d43e048412bcdc52aafc4efc17c35d67f72c1a5676
+- Repository: https://github.com/Artem1981777/genlayer-dashboard
+
