@@ -6,15 +6,17 @@ import { sendWrite, makeWriteClient } from "@/lib/genlayer"
 import { short, txUrl } from "@/lib/format"
 import { Zap } from "lucide-react"
 type Field = { key: string; label: string; type: "text" | "number" | "select"; options?: string[]; placeholder?: string }
-type ActionDef = { fn: string; label: string; tone?: "ok" | "bad" | "warn"; fields?: Field[]; build?: (v: Record<string, string>) => any[]; value?: (v: Record<string, string>) => bigint }
+type ActionDef = { fn: string; label: string; tone?: "ok" | "bad" | "warn"; fields?: Field[]; build?: (v: Record<string, string>) => any[]; value?: (v: Record<string, string>) => bigint; gate?: (st: any, acct?: string | null) => string | null }
+const isCreator = (st: any, acct?: string | null) => !!(acct && st && st.creator && String(acct).toLowerCase() === String(st.creator).toLowerCase())
+const creatorGate = (st: any, acct?: string | null) => isCreator(st, acct) ? null : "Only the market creator can do this"
 const ACTIONS: Record<string, ActionDef[]> = {
   prediction: [
-    { fn: "stake", label: "Stake", tone: "ok", fields: [ { key: "side", label: "Side", type: "select", options: ["YES", "NO"] }, { key: "amount", label: "Amount (wei)", type: "number", placeholder: "100" } ], build: (v) => [v.side || "YES"], value: (v) => BigInt(Math.max(1, Math.floor(Number(v.amount || "1")))) },
-    { fn: "resolve", label: "Resolve" },
-    { fn: "dispute", label: "Dispute", tone: "warn", fields: [ { key: "reason", label: "Reason", type: "text", placeholder: "Requesting re-review of the cited sources" } ], build: (v) => [v.reason || ""] },
-    { fn: "resolve_dispute", label: "Resolve dispute" },
-    { fn: "settle", label: "Settle" },
-    { fn: "claim", label: "Claim", tone: "ok" },
+    { fn: "stake", label: "Stake", tone: "ok", fields: [ { key: "side", label: "Side", type: "select", options: ["YES", "NO"] }, { key: "amount", label: "Amount (wei)", type: "number", placeholder: "100" } ], build: (v) => [v.side || "YES"], value: (v) => BigInt(Math.max(1, Math.floor(Number(v.amount || "1")))), gate: (st) => (st && st.status === "open") ? null : "Staking is closed (market not open)" },
+    { fn: "resolve", label: "Resolve", gate: (st, acct) => (st && st.status !== "open") ? "Market already resolved" : creatorGate(st, acct) },
+    { fn: "dispute", label: "Dispute", tone: "warn", fields: [ { key: "reason", label: "Reason", type: "text", placeholder: "Requesting re-review of the cited sources" } ], build: (v) => [v.reason || ""], gate: (st) => (st && st.status === "resolved") ? null : "Can dispute only a resolved market" },
+    { fn: "resolve_dispute", label: "Resolve dispute", gate: (st, acct) => (st && st.status !== "disputed") ? "No active dispute" : creatorGate(st, acct) },
+    { fn: "settle", label: "Settle", gate: (st, acct) => (st && st.status !== "resolved") ? "Can settle only a resolved market" : ((st && (st.outcome === "YES" || st.outcome === "NO")) ? creatorGate(st, acct) : "Cannot settle an UNRESOLVED market") },
+    { fn: "claim", label: "Claim", tone: "ok", gate: (st) => (st && st.status === "settled") ? null : "Claim only after settlement" },
   ],
   moderator: [
     { fn: "moderate", label: "Moderate", tone: "ok" },
@@ -26,7 +28,7 @@ const ACTIONS: Record<string, ActionDef[]> = {
     { fn: "update", label: "Update feed", tone: "ok", fields: [ { key: "key", label: "Feed key", type: "text", placeholder: "btc_usd" } ], build: (v) => [v.key || "btc_usd"] },
   ],
 }
-export function ActionsPanel({ projectId, address, onDone }: { projectId: string; address: string; onDone?: () => void }) {
+export function ActionsPanel({ projectId, address, onDone, state }: { projectId: string; address: string; onDone?: () => void; state?: any }) {
   const { address: acct, active, wrongNetwork, writeClient, ensureNetwork } = useWallet()
   const [openFn, setOpenFn] = useState<string | null>(null)
   const [form, setForm] = useState<Record<string, string>>({})
@@ -35,6 +37,8 @@ export function ActionsPanel({ projectId, address, onDone }: { projectId: string
   if (!actions.length) return null
   async function run(a: ActionDef) {
     if (!acct) { toast.error("Connect a wallet first"); return }
+    const gateMsg = a.gate ? a.gate(state, acct) : null
+    if (gateMsg) { toast.error(gateMsg); return }
     if (!active) { toast.error("Connect a wallet first"); return }; try { let cid = String(await active.provider.request({ method: "eth_chainId" })).toLowerCase(); if (cid !== "0x107d") { toast.error("Switching to GenLayer Bradbury..."); await ensureNetwork(); cid = String(await active.provider.request({ method: "eth_chainId" })).toLowerCase() }; if (cid !== "0x107d") { toast.error("Wrong network - switch to Bradbury to continue"); return } } catch (ne) { toast.error("Network check failed"); return }
     const client = makeWriteClient(acct, active.provider)
     const args = a.build ? a.build(form) : []
@@ -60,7 +64,7 @@ export function ActionsPanel({ projectId, address, onDone }: { projectId: string
       <div className="flex between center"><div className="dim" style={{ fontSize: 12 }}>Actions</div>{!acct ? <span className="dim" style={{ fontSize: 11.5 }}>connect wallet to act</span> : wrongNetwork ? <span style={{ color: "var(--warn)", fontSize: 11.5 }}>wrong network</span> : null}</div>
       <div className="flex gap wrap mt8">
         {actions.map((a) => (
-          <button key={a.fn} className={"btn" + (a.tone === "ok" ? " primary" : "")} disabled={busy !== null} onClick={() => click(a)}>
+          <button key={a.fn} className={"btn" + (a.tone === "ok" ? " primary" : "")} disabled={busy !== null || !!(a.gate && a.gate(state, acct))} title={(a.gate && a.gate(state, acct)) || undefined} onClick={() => click(a)}>
             <Zap size={13} /> {busy === a.fn ? "\u2026" : a.label}
           </button>
         ))}
@@ -79,7 +83,7 @@ export function ActionsPanel({ projectId, address, onDone }: { projectId: string
               )}
             </div>
           ))}
-          <button className="btn primary" disabled={busy !== null} onClick={() => run(activeDef)}>{busy ? "\u2026" : "Submit " + activeDef.label}</button>
+          <button className="btn primary" disabled={busy !== null || !!(activeDef.gate && activeDef.gate(state, acct))} onClick={() => run(activeDef)}>{busy ? "\u2026" : "Submit " + activeDef.label}</button>
         </div>
       ) : null}
     </div>

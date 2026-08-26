@@ -37,7 +37,7 @@ export const PROJECTS: ProjectDef[] = [
       { value: "UNRESOLVED", label: "Unresolved", tone: "muted" },
     ],
     seedContracts: [
-      "0x72f6BE503a8319A40515641536C1d74378623914",
+      "0xd5fbdf280d1726079d3741B4E18BaD656851A34d",
       "0x86d36795b66c29A7445945585a4C9f09C289C8ba",
       "0x5853abFE0CBF83ac65cd3DACFB35Bb1B0314C969",
       
