@@ -6,7 +6,7 @@ type Ctx = { projectId: string; setProjectId: (id: string) => void; mode: Mode; 
 const AppCtx = createContext<Ctx | null>(null)
 export function useApp() { const c = useContext(AppCtx); if (!c) throw new Error("useApp outside provider"); return c }
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [projectId, setProjectId] = useState(PROJECTS[0].id)
+  const [projectId, setProjectId] = useState<string>(PROJECTS[0].id)
   const [mode, setMode] = useState<Mode>("live")
   useEffect(() => {
     try { const p = localStorage.getItem("gl-project"); if (p) setProjectId(p); const m = localStorage.getItem("gl-mode") as Mode; if (m) setMode(m) } catch {}

@@ -6,10 +6,10 @@ import { sendWrite, makeWriteClient } from "@/lib/genlayer"
 import { short, txUrl } from "@/lib/format"
 import { Zap } from "lucide-react"
 type Field = { key: string; label: string; type: "text" | "number" | "select"; options?: string[]; placeholder?: string }
-type ActionDef = { fn: string; label: string; tone?: "ok" | "bad" | "warn"; fields?: Field[]; build?: (v: Record<string, string>) => any[] }
+type ActionDef = { fn: string; label: string; tone?: "ok" | "bad" | "warn"; fields?: Field[]; build?: (v: Record<string, string>) => any[]; value?: (v: Record<string, string>) => bigint }
 const ACTIONS: Record<string, ActionDef[]> = {
   prediction: [
-    { fn: "stake", label: "Stake", tone: "ok", fields: [ { key: "side", label: "Side", type: "select", options: ["YES", "NO"] }, { key: "amount", label: "Amount", type: "number", placeholder: "100" } ], build: (v) => [v.side || "YES", Math.max(0, Math.floor(Number(v.amount || "0")))] },
+    { fn: "stake", label: "Stake", tone: "ok", fields: [ { key: "side", label: "Side", type: "select", options: ["YES", "NO"] }, { key: "amount", label: "Amount (wei)", type: "number", placeholder: "100" } ], build: (v) => [v.side || "YES"], value: (v) => BigInt(Math.max(1, Math.floor(Number(v.amount || "1")))) },
     { fn: "resolve", label: "Resolve" },
     { fn: "dispute", label: "Dispute", tone: "warn", fields: [ { key: "reason", label: "Reason", type: "text", placeholder: "Requesting re-review of the cited sources" } ], build: (v) => [v.reason || ""] },
     { fn: "resolve_dispute", label: "Resolve dispute" },
@@ -38,10 +38,11 @@ export function ActionsPanel({ projectId, address, onDone }: { projectId: string
     if (!active) { toast.error("Connect a wallet first"); return }; try { let cid = String(await active.provider.request({ method: "eth_chainId" })).toLowerCase(); if (cid !== "0x107d") { toast.error("Switching to GenLayer Bradbury..."); await ensureNetwork(); cid = String(await active.provider.request({ method: "eth_chainId" })).toLowerCase() }; if (cid !== "0x107d") { toast.error("Wrong network - switch to Bradbury to continue"); return } } catch (ne) { toast.error("Network check failed"); return }
     const client = makeWriteClient(acct, active.provider)
     const args = a.build ? a.build(form) : []
+    const value = a.value ? a.value(form) : BigInt(0)
     setBusy(a.fn)
     const tid = toast.loading(a.label + " \u2014 awaiting consensus\u2026")
     try {
-      const hash = await sendWrite(client, address, a.fn, args)
+      const hash = await sendWrite(client, address, a.fn, args, value)
       toast.success(a.label + " confirmed", { id: tid, description: short(hash, 8), action: { label: "Explorer", onClick: () => window.open(txUrl(hash), "_blank") } })
       setOpenFn(null); setForm({})
       if (onDone) onDone()
