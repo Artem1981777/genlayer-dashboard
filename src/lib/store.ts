@@ -1,6 +1,6 @@
 "use client"
 import { PROJECTS } from "./projects"
-const KEY = "gl-tracked-v1"
+const KEY = "gl-tracked-v2"
 type Store = Record<string, string[]>
 function seed(): Store { const s: Store = {}; for (const p of PROJECTS) s[p.id] = [...p.seedContracts]; return s }
 export function loadTracked(): Store {
