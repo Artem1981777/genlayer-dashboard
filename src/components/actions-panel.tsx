@@ -8,15 +8,15 @@ import { Zap } from "lucide-react"
 type Field = { key: string; label: string; type: "text" | "number" | "select"; options?: string[]; placeholder?: string }
 type ActionDef = { fn: string; label: string; tone?: "ok" | "bad" | "warn"; fields?: Field[]; build?: (v: Record<string, string>) => any[]; value?: (v: Record<string, string>) => bigint; gate?: (st: any, acct?: string | null) => string | null }
 const isCreator = (st: any, acct?: string | null) => !!(acct && st && st.creator && String(acct).toLowerCase() === String(st.creator).toLowerCase())
-const creatorGate = (st: any, acct?: string | null) => isCreator(st, acct) ? null : "Only the market creator can do this"
+const creatorGate = (st: any, acct?: string | null) => (st && st.creator && acct && !isCreator(st, acct)) ? "Only the market creator can do this" : null
 const ACTIONS: Record<string, ActionDef[]> = {
   prediction: [
-    { fn: "stake", label: "Stake", tone: "ok", fields: [ { key: "side", label: "Side", type: "select", options: ["YES", "NO"] }, { key: "amount", label: "Amount (wei)", type: "number", placeholder: "100" } ], build: (v) => [v.side || "YES"], value: (v) => BigInt(Math.max(1, Math.floor(Number(v.amount || "1")))), gate: (st) => (st && st.status === "open") ? null : "Staking is closed (market not open)" },
-    { fn: "resolve", label: "Resolve", gate: (st, acct) => (st && st.status !== "open") ? "Market already resolved" : creatorGate(st, acct) },
-    { fn: "dispute", label: "Dispute", tone: "warn", fields: [ { key: "reason", label: "Reason", type: "text", placeholder: "Requesting re-review of the cited sources" } ], build: (v) => [v.reason || ""], gate: (st) => (st && st.status === "resolved") ? null : "Can dispute only a resolved market" },
-    { fn: "resolve_dispute", label: "Resolve dispute", gate: (st, acct) => (st && st.status !== "disputed") ? "No active dispute" : creatorGate(st, acct) },
-    { fn: "settle", label: "Settle", gate: (st, acct) => (st && st.status !== "resolved") ? "Can settle only a resolved market" : ((st && (st.outcome === "YES" || st.outcome === "NO")) ? creatorGate(st, acct) : "Cannot settle an UNRESOLVED market") },
-    { fn: "claim", label: "Claim", tone: "ok", gate: (st) => (st && st.status === "settled") ? null : "Claim only after settlement" },
+    { fn: "stake", label: "Stake", tone: "ok", fields: [ { key: "side", label: "Side", type: "select", options: ["YES", "NO"] }, { key: "amount", label: "Amount (wei)", type: "number", placeholder: "100" } ], build: (v) => [v.side || "YES"], value: (v) => BigInt(Math.max(1, Math.floor(Number(v.amount || "1")))), gate: (st) => (st && st.status && st.status !== "open") ? "Staking is closed (market not open)" : null },
+    { fn: "resolve", label: "Resolve", gate: (st, acct) => (st && st.status && st.status !== "open") ? "Market already resolved" : creatorGate(st, acct) },
+    { fn: "dispute", label: "Dispute", tone: "warn", fields: [ { key: "reason", label: "Reason", type: "text", placeholder: "Requesting re-review of the cited sources" } ], build: (v) => [v.reason || ""], gate: (st) => (st && st.status && st.status !== "resolved") ? "Can dispute only a resolved market" : null },
+    { fn: "resolve_dispute", label: "Resolve dispute", gate: (st, acct) => (st && st.status && st.status !== "disputed") ? "No active dispute" : creatorGate(st, acct) },
+    { fn: "settle", label: "Settle", gate: (st, acct) => (st && st.status && st.status !== "resolved") ? "Can settle only a resolved market" : ((st && st.outcome && st.outcome !== "YES" && st.outcome !== "NO") ? "Cannot settle an UNRESOLVED market" : creatorGate(st, acct)) },
+    { fn: "claim", label: "Claim", tone: "ok", gate: (st) => (st && st.status && st.status !== "settled") ? "Claim only after settlement" : null },
   ],
   moderator: [
     { fn: "moderate", label: "Moderate", tone: "ok" },
@@ -64,7 +64,7 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
       <div className="flex between center"><div className="dim" style={{ fontSize: 12 }}>Actions</div>{!acct ? <span className="dim" style={{ fontSize: 11.5 }}>connect wallet to act</span> : wrongNetwork ? <span style={{ color: "var(--warn)", fontSize: 11.5 }}>wrong network</span> : null}</div>
       <div className="flex gap wrap mt8">
         {actions.map((a) => (
-          <button key={a.fn} className={"btn" + (a.tone === "ok" ? " primary" : "")} disabled={busy !== null || !!(a.gate && a.gate(state, acct))} title={(a.gate && a.gate(state, acct)) || undefined} onClick={() => click(a)}>
+          <button key={a.fn} className={"btn" + (a.tone === "ok" ? " primary" : "")} disabled={busy !== null} title={(a.gate && a.gate(state, acct)) || undefined} onClick={() => click(a)}>
             <Zap size={13} /> {busy === a.fn ? "\u2026" : a.label}
           </button>
         ))}
@@ -83,7 +83,7 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
               )}
             </div>
           ))}
-          <button className="btn primary" disabled={busy !== null || !!(activeDef.gate && activeDef.gate(state, acct))} onClick={() => run(activeDef)}>{busy ? "\u2026" : "Submit " + activeDef.label}</button>
+          <button className="btn primary" disabled={busy !== null} onClick={() => run(activeDef)}>{busy ? "\u2026" : "Submit " + activeDef.label}</button>
         </div>
       ) : null}
     </div>
