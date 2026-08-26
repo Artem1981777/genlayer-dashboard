@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest"
 import { PROJECTS, getProject } from "./projects"
 
 const CM = "0x235F51b11b9F96d6673df37553Ef58373c4324F9"
+const MOD = "0x16cD8F92DEdDBdF27E7bc8c53633C61Dbb352307"
 const PM = "0xd5fbdf280d1726079d3741B4E18BaD656851A34d"
 const ADDR = /^0x[0-9a-fA-F]{40}$/
 
@@ -11,7 +12,8 @@ describe("projects config", () => {
     expect(getProject("prediction").id).toBe("prediction")
   })
   it("defaults to latest contracts (seedContracts[0])", () => {
-    expect(getProject("moderator").seedContracts[0]).toBe(CM)
+    expect(getProject("moderator").seedContracts[0]).toBe(MOD)
+    expect(getProject("moderator").seedContracts).toContain(CM)
     expect(getProject("prediction").seedContracts[0]).toBe(PM)
   })
   it("drops the stale prediction address", () => {

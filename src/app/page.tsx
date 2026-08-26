@@ -28,7 +28,7 @@ export default function Overview() {
   const escalated = cases.filter((c) => c.state?.escalated === "true").length
   const review = cases.filter((c) => c.state?.needs_review === "true").length
   const online = cases.some((c) => c.state)
-  const openCase = cases.find((c) => c.state && c.state.status === "open")
+  const openCase = cases.find((c) => c.state && (c.state.status === "open" || c.state.status === "pending"))
   const selectedCase = cases.find((c) => c.address === selected) || openCase || decided[0] || cases[0]
   const primary = project.decisions[0]?.value
   return (
