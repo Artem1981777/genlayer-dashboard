@@ -11,6 +11,8 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
   const [openFn, setOpenFn] = useState<string | null>(null)
   const [form, setForm] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState<string | null>(null)
+  const [lastHash, setLastHash] = useState<string | null>(null)
+  const [phase, setPhase] = useState<string>("")
   const allActions = ACTIONS[projectId] || []
   if (!allActions.length) return null
   const actions = allActions.filter((a) => phaseOk(a, state))
@@ -25,7 +27,9 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
     setBusy(a.fn)
     const tid = toast.loading(a.label + " \u2014 awaiting consensus\u2026")
     try {
-      const hash = await sendWrite(client, address, a.fn, args, value)
+      setLastHash(null); setPhase("")
+      const hash = await sendWrite(client, address, a.fn, args, value, (h) => { setLastHash(h); setPhase("waiting"); toast.loading(a.label + " - tx " + short(h, 8) + " - waiting for consensus...", { id: tid, description: "Submitted on-chain. Consensus can take a few minutes.", action: { label: "Explorer", onClick: () => window.open(txUrl(h), "_blank") } }) })
+      setPhase("finished")
       toast.success(a.label + " confirmed", { id: tid, description: short(hash, 8), action: { label: "Explorer", onClick: () => window.open(txUrl(hash), "_blank") } })
       setOpenFn(null); setForm({})
       setBusy("__sync__")
@@ -38,6 +42,7 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
       }
       if (onDone) onDone()
     } catch (e: any) {
+      setPhase("error")
       toast.error(a.label + " failed", { id: tid, description: String(e && e.message ? e.message : e).slice(0, 140) })
     } finally { setBusy(null) }
   }
@@ -48,6 +53,7 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
   const activeDef = openFn ? actions.find((x) => x.fn === openFn) : null
   return (
     <div className="mt actions">
+      {lastHash ? <div className="tag mono mt8" style={{ display: "inline-flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}><span>{(phase === "finished" ? "finished" : phase === "error" ? "failed (tx sent)" : "waiting for consensus...") + " - tx "}</span><a href={txUrl(lastHash)} target="_blank" rel="noreferrer">{short(lastHash, 8)}</a></div> : null}
       <div className="flex between center"><div className="dim" style={{ fontSize: 12 }}>Actions</div>{busy === "__sync__" ? <span className="dim" style={{ fontSize: 11.5 }}>syncing next step, please wait...</span> : null}{!acct ? <span className="dim" style={{ fontSize: 11.5 }}>connect wallet to act</span> : wrongNetwork ? <span style={{ color: "var(--warn)", fontSize: 11.5 }}>wrong network</span> : null}</div>
       <div className="flex gap wrap mt8">{!actions.length ? <span className="dim" style={{ fontSize: 11.5 }}>No actions available for your wallet in this phase</span> : null}
         {actions.map((a) => (

@@ -51,10 +51,10 @@ export const PROJECTS: ProjectDef[] = [
     icon: "Radio",
     accent: "#5ad1ff",
     repo: "https://github.com/Artem1981777/genlayer-multi-source-oracle",
-    demo: "https://explorer-bradbury.genlayer.com/address/0x9a87961693FF753de5AeBcfD72D861BD21C9d0A4",
+    demo: "https://explorer-bradbury.genlayer.com/address/0xfdE0d2cBD651FC3E7c14fFEc7D981A05E2969DCC",
     decisionField: "verdict",
     decisions: [],
-    seedContracts: ["0x9a87961693FF753de5AeBcfD72D861BD21C9d0A4"],
+    seedContracts: ["0xfdE0d2cBD651FC3E7c14fFEc7D981A05E2969DCC"],
   },
 ]
 export const getProject = (id: string) => PROJECTS.find((p) => p.id === id) || PROJECTS[0]

@@ -17,10 +17,10 @@ export function makeWriteClient(account: string, provider: any) {
 function retriable(m: string) {
   return /-32005|capacity|rate limit|exceeds defined limit|consensus contract|evm tx|NOT_VOTED|timeout|timed out/i.test(String(m || ""))
 }
-export async function sendWrite(client: any, address: string, functionName: string, args: any[] = [], value: bigint = BigInt(0)): Promise<string> {
+export async function sendWrite(client: any, address: string, functionName: string, args: any[] = [], value: bigint = BigInt(0), onHash?: (h: string) => void): Promise<string> {
   try {
-    const hash = (await client.writeContract({ address, functionName, args, value })) as string
-    const receipt: any = await client.waitForTransactionReceipt({ hash, status: TransactionStatus.ACCEPTED, interval: 5000, retries: 200, fullTransaction: true }); const rn = String((receipt && (receipt.txExecutionResultName || receipt.execution_result)) || "").toUpperCase(); if (rn.includes("ERROR") || rn === "NOT_VOTED" || rn === "UNDETERMINED") throw new Error("On-chain execution not successful (" + (rn || "unknown") + ")"); if (rn && rn !== "FINISHED_WITH_RETURN" && rn !== "FINISHED") throw new Error("Unexpected execution result (" + rn + ")")
+    const hash = (await client.writeContract({ address, functionName, args, value })) as string; try { if (onHash) onHash(hash) } catch {}
+    const receipt: any = await client.waitForTransactionReceipt({ hash, status: TransactionStatus.ACCEPTED, interval: 5000, retries: 260, fullTransaction: true }); const rn = String((receipt && (receipt.txExecutionResultName || receipt.execution_result)) || "").toUpperCase(); if (rn.includes("ERROR") || rn === "NOT_VOTED" || rn === "UNDETERMINED") throw new Error("On-chain execution not successful (" + (rn || "unknown") + ")"); if (rn && rn !== "FINISHED_WITH_RETURN" && rn !== "FINISHED") throw new Error("Unexpected execution result (" + rn + ")")
     return hash
   } catch (e: any) {
     const msg = String(e && e.message ? e.message : e)
