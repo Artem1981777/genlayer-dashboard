@@ -2,10 +2,10 @@
 import { useState } from "react"
 import { toast } from "sonner"
 import { useWallet } from "@/hooks/use-wallet"
-import { sendWrite, makeWriteClient } from "@/lib/genlayer"
+import { sendWrite, makeWriteClient, readState } from "@/lib/genlayer"
 import { short, txUrl } from "@/lib/format"
 import { Zap } from "lucide-react"
-import { ACTIONS, canDo, whyNot, type ActionDef } from "@/lib/actions"
+import { ACTIONS, canDo, phaseOk, whyNot, type ActionDef } from "@/lib/actions"
 export function ActionsPanel({ projectId, address, onDone, state }: { projectId: string; address: string; onDone?: () => void; state?: any }) {
   const { address: acct, active, wrongNetwork, writeClient, ensureNetwork } = useWallet()
   const [openFn, setOpenFn] = useState<string | null>(null)
@@ -13,7 +13,7 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
   const [busy, setBusy] = useState<string | null>(null)
   const allActions = ACTIONS[projectId] || []
   if (!allActions.length) return null
-  const actions = allActions.filter((a) => canDo(a, state, acct))
+  const actions = allActions.filter((a) => phaseOk(a, state))
   async function run(a: ActionDef) {
     if (!acct) { toast.error("Connect a wallet first"); return }
     const _blocked = !canDo(a, state, acct)
@@ -28,6 +28,14 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
       const hash = await sendWrite(client, address, a.fn, args, value)
       toast.success(a.label + " confirmed", { id: tid, description: short(hash, 8), action: { label: "Explorer", onClick: () => window.open(txUrl(hash), "_blank") } })
       setOpenFn(null); setForm({})
+      setBusy("__sync__")
+      const prevKey = JSON.stringify({ status: (state && state.status) || "", history: (state && state.history) || "" })
+      for (let i = 0; i < 240; i++) {
+        let ns: any = null
+        try { ns = await readState(address) } catch {}
+        if (ns && JSON.stringify({ status: ns.status || "", history: ns.history || "" }) !== prevKey) break
+        await new Promise((r) => setTimeout(r, 4000))
+      }
       if (onDone) onDone()
     } catch (e: any) {
       toast.error(a.label + " failed", { id: tid, description: String(e && e.message ? e.message : e).slice(0, 140) })
@@ -40,14 +48,21 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
   const activeDef = openFn ? actions.find((x) => x.fn === openFn) : null
   return (
     <div className="mt actions">
-      <div className="flex between center"><div className="dim" style={{ fontSize: 12 }}>Actions</div>{!acct ? <span className="dim" style={{ fontSize: 11.5 }}>connect wallet to act</span> : wrongNetwork ? <span style={{ color: "var(--warn)", fontSize: 11.5 }}>wrong network</span> : null}</div>
+      <div className="flex between center"><div className="dim" style={{ fontSize: 12 }}>Actions</div>{busy === "__sync__" ? <span className="dim" style={{ fontSize: 11.5 }}>syncing next step, please wait...</span> : null}{!acct ? <span className="dim" style={{ fontSize: 11.5 }}>connect wallet to act</span> : wrongNetwork ? <span style={{ color: "var(--warn)", fontSize: 11.5 }}>wrong network</span> : null}</div>
       <div className="flex gap wrap mt8">{!actions.length ? <span className="dim" style={{ fontSize: 11.5 }}>No actions available for your wallet in this phase</span> : null}
         {actions.map((a) => (
-          <button key={a.fn} className={"btn" + (a.tone === "ok" ? " primary" : "")} disabled={busy !== null} onClick={() => click(a)}>
+          <button key={a.fn} className={"btn" + (a.tone === "ok" ? " primary" : "")} disabled={busy !== null || !canDo(a, state, acct)} title={canDo(a, state, acct) ? "" : whyNot(a, state, acct)} onClick={() => click(a)}>
             <Zap size={13} /> {busy === a.fn ? "\u2026" : a.label}
           </button>
         ))}
       </div>
+      {actions.some((a) => !canDo(a, state, acct)) ? (
+        <div className="dim mt8" style={{ fontSize: 11.5, lineHeight: 1.6 }}>
+          {actions.filter((a) => !canDo(a, state, acct)).map((a) => (
+            <div key={a.fn}>{a.label}: {whyNot(a, state, acct)}{a.role === "creator" && state && state.creator ? " (operator " + String(state.creator).slice(0, 6) + "..." + String(state.creator).slice(-4) + ")" : a.role === "author" && state && state.author ? " (author " + String(state.author).slice(0, 6) + "..." + String(state.author).slice(-4) + ")" : ""}</div>
+          ))}
+        </div>
+      ) : null}
       {activeDef ? (
         <div className="action-form mt8">
           {(activeDef.fields || []).map((f) => (

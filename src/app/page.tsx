@@ -55,7 +55,7 @@ export default function Overview() {
       </div>
       <div className="split mt">
         <div className="card">
-          <div className="flex between center wrap gap"><b>Cases</b><AddContract projectId={projectId} onAdded={refresh} /></div>
+          <div className="flex between center wrap gap"><b>Cases</b><div className="flex gap center wrap"><AddContract projectId={projectId} onAdded={refresh} /></div></div>
           <div className="grid mt" style={{ gap: 10 }}>
             {loading && !cases.length ? [0, 1, 2].map((i) => <div key={i} className="sk" style={{ height: 60 }} />) : null}
             {!loading && !cases.length ? <div className="empty"><div className="big">No cases tracked</div>Add a contract address to start.</div> : null}

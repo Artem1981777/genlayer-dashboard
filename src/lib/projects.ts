@@ -15,6 +15,9 @@ export const PROJECTS: ProjectDef[] = [
       { value: "REMOVE", label: "Remove", tone: "bad" },
     ],
     seedContracts: [
+      "0xD7E2ef74a1ACAAF579E97b2843Cac02EefE15A2c",
+      "0xF83a360cBA484C09E34018D3FF2f3800d6470DC3",
+      "0x0747802565F083d1784ED3f8Ff973Bf0920A61ea",
       "0x16cD8F92DEdDBdF27E7bc8c53633C61Dbb352307",
       "0x235F51b11b9F96d6673df37553Ef58373c4324F9",
       "0x16C0747A98dCa576Fd1A495DD5FA2be0E1333192",
