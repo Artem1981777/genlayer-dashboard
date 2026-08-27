@@ -1,6 +1,6 @@
 "use client"
 import { PROJECTS } from "./projects"
-const KEY = "gl-tracked-v3"
+const KEY = "gl-tracked-v4"
 type Store = Record<string, string[]>
 function seed(): Store { const s: Store = {}; for (const p of PROJECTS) s[p.id] = [...p.seedContracts]; return s }
 export function loadTracked(): Store {
@@ -9,7 +9,7 @@ export function loadTracked(): Store {
     const raw = localStorage.getItem(KEY)
     if (!raw) { const s = seed(); localStorage.setItem(KEY, JSON.stringify(s)); return s }
     const parsed = JSON.parse(raw); const base = seed()
-    for (const p of PROJECTS) if (!parsed[p.id]) parsed[p.id] = base[p.id]
+    for (const p of PROJECTS) { const ex: string[] = Array.isArray(parsed[p.id]) ? parsed[p.id] : []; const low = new Set(ex.map((x) => String(x).toLowerCase())); const miss = base[p.id].filter((a) => !low.has(a.toLowerCase())); parsed[p.id] = [...miss, ...ex] }
     return parsed
   } catch { return seed() }
 }
