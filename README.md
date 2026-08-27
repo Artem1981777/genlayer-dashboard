@@ -36,7 +36,7 @@ Source: apps/multi-source-oracle/contracts/oracle.py
 
 - Prediction Market (open): 0xd5fbdf280d1726079d3741B4E18BaD656851A34d
 - Content Moderator (interactive, pending): 0x16cD8F92DEdDBdF27E7bc8c53633C61Dbb352307
-- Multi-Source Oracle: 0x9a87961693FF753de5AeBcfD72D861BD21C9d0A4
+- Multi-Source Oracle: 0xfdE0d2cBD651FC3E7c14fFEc7D981A05E2969DCC
 
 ## Write lifecycle
 
