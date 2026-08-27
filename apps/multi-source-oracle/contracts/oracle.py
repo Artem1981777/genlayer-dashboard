@@ -147,17 +147,48 @@ class MultiSourceOracle(gl.Contract):
                 med = float(s[mid])
             else:
                 med = (float(s[mid - 1]) + float(s[mid])) / 2.0
-            lo = min(samples)
-            hi = max(samples)
+            inliers = list(samples)
+            if n >= 3:
+                fi = 0
+                fd = -1.0
+                for i in range(n):
+                    di = abs(samples[i] - med)
+                    if di > fd:
+                        fd = di
+                        fi = i
+                inliers = [samples[i] for i in range(n) if i != fi]
+            lo = min(inliers)
+            hi = max(inliers)
             if med == 0:
                 spread_bps = 0 if hi == lo else 10000
             else:
                 spread_bps = int(round(((hi - lo) / abs(med)) * 10000))
             ok = (n >= 2) and (spread_bps <= max_spread_bps)
             reason = "" if ok else "too few samples or sources disagree beyond max_spread_bps"
-            return json.dumps({"ok": ok, "reason": reason, "median": round(med, decimals), "samples": [round(x, decimals) for x in samples], "sources_used": n, "spread_bps": spread_bps})
-        principle = ("Both results must report a 'median' that agrees within " + str(tolerance_bps) + " basis points (1 bps = 0.01%) of each other, AND agree on the boolean 'ok'. Differences in individual 'samples' values or ordering, in 'sources_used' by at most one, and in 'reason' wording do NOT matter; only the 'median' (within tolerance) and 'ok' must match.")
-        raw = gl.eq_principle.prompt_comparative(aggregate, principle)
+            mu = int(round(med * (10 ** decimals)))
+            return json.dumps({"ok": ok, "reason": reason, "median": mu / (10 ** decimals), "median_units": mu, "decimals": decimals, "samples": [round(x, decimals) for x in samples], "sources_used": n, "spread_bps": spread_bps})
+        def leader_fn() -> str:
+            return aggregate()
+        def validator_fn(leader_result) -> bool:
+            if not isinstance(leader_result, gl.vm.Return):
+                return False
+            try:
+                ld = json.loads(leader_result.calldata)
+                vd = json.loads(leader_fn())
+            except Exception:
+                return False
+            ln = int(ld.get("sources_used", 0))
+            vn = int(vd.get("sources_used", 0))
+            if ln < 2:
+                return vn < 2
+            if vn < 2:
+                return False
+            lu = int(ld.get("median_units", 0))
+            vu = int(vd.get("median_units", 0))
+            if lu == 0:
+                return vu == 0
+            return abs(lu - vu) * 10000 <= tolerance_bps * abs(lu)
+        raw = gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
         data = None
         try:
             data = json.loads(raw)
@@ -172,13 +203,15 @@ class MultiSourceOracle(gl.Contract):
         assert isinstance(data, dict), "Oracle aggregation returned an unparseable result"
         ok = bool(data.get("ok", False))
         assert ok, "Oracle update rejected: " + str(data.get("reason", "sources disagreed"))
-        median = data.get("median", 0)
+        median_units = int(data.get("median_units", 0))
+        dec = int(data.get("decimals", decimals))
+        median = median_units / (10 ** dec)
         samples = data.get("samples", [])
         sources_used = int(data.get("sources_used", 0))
         spread_bps = int(data.get("spread_bps", 0))
         vals = self._values()
         prev = vals.get(key, {})
         round_no = len(self._history_list()) + 1
-        vals[key] = {"value": median, "median": median, "samples": samples, "sources_used": sources_used, "spread_bps": spread_bps, "updated_round": round_no, "updated_by": str(gl.message.sender_address), "status": "ok", "previous": prev.get("value", None)}
+        vals[key] = {"value": median, "median": median, "median_units": median_units, "decimals": dec, "samples": samples, "sources_used": sources_used, "spread_bps": spread_bps, "updated_round": round_no, "updated_by": str(gl.message.sender_address), "status": "ok", "previous": prev.get("value", None)}
         self.values = json.dumps(vals)
         self._log("update", key, "median=" + str(median) + " n=" + str(sources_used) + " spread_bps=" + str(spread_bps))
