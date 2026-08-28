@@ -22,7 +22,9 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
       try { ns = await readState(address) } catch {}
       if (ns && JSON.stringify({ status: ns.status || "", history: ns.history || "" }) !== prevKey) {
         setPhase("finished")
-        toast.success(label + " confirmed", { id: tid, description: short(hash, 8), action: { label: "Explorer", onClick: () => window.open(txUrl(hash), "_blank") } })
+        const opts: any = { id: tid, description: hash ? short(hash, 8) : "confirmed on-chain" }
+        if (hash) opts.action = { label: "Explorer", onClick: () => window.open(txUrl(hash), "_blank") }
+        toast.success(label + " confirmed", opts)
         return true
       }
       await new Promise((r) => setTimeout(r, 4000))
@@ -44,25 +46,39 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
     try {
       setLastHash(null); setPhase("")
       const res = await sendWriteEx(client, address, a.fn, args, value, (h) => { sentHash = h; setLastHash(h); setPhase("waiting"); toast.loading(a.label + " - tx " + short(h, 8) + " - waiting for consensus...", { id: tid, description: "Submitted on-chain. Consensus can take a few minutes.", action: { label: "Explorer", onClick: () => window.open(txUrl(h), "_blank") } }) })
+      setOpenFn(null); setForm({})
       if (res.confirmed) {
         setPhase("finished")
         toast.success(a.label + " confirmed", { id: tid, description: short(res.hash, 8), action: { label: "Explorer", onClick: () => window.open(txUrl(res.hash), "_blank") } })
+        setBusy("__sync__")
+        await waitForStateChange(prevKey, res.hash, tid, a.label)
       } else {
         setPhase("waiting")
         toast.loading(a.label + " submitted - finalizing on-chain...", { id: tid, description: "Tx " + short(res.hash, 8) + " sent. Result appears after consensus.", action: { label: "Explorer", onClick: () => window.open(txUrl(res.hash), "_blank") } })
+        setBusy("__sync__")
+        const ok = await waitForStateChange(prevKey, res.hash, tid, a.label)
+        if (!ok) { setPhase("waiting"); toast.message(a.label + " - still finalizing", { id: tid, description: "Tx " + short(res.hash, 8) + " is on-chain. Use Refresh in a moment; the result appears once consensus completes.", action: { label: "Explorer", onClick: () => window.open(txUrl(res.hash), "_blank") } }) }
       }
-      setOpenFn(null); setForm({})
-      setBusy("__sync__")
-      await waitForStateChange(prevKey, res.hash, tid, a.label)
       if (onDone) onDone()
     } catch (e: any) {
       const msg = String(e && e.message ? e.message : e)
       const execError = /execution not successful/i.test(msg)
+      const ambiguous = !!(e && e.ambiguous)
       if (sentHash && !execError) {
         setPhase("waiting")
+        setOpenFn(null); setForm({})
         toast.loading(a.label + " submitted - still finalizing (network busy)", { id: tid, description: "Tx " + short(sentHash, 8) + " is on-chain. Tap Explorer to track; the dashboard updates automatically.", action: { label: "Explorer", onClick: () => window.open(txUrl(sentHash as string), "_blank") } })
         setBusy("__sync__")
-        await waitForStateChange(prevKey, sentHash as string, tid, a.label)
+        const ok = await waitForStateChange(prevKey, sentHash as string, tid, a.label)
+        if (!ok) { toast.message(a.label + " - still finalizing", { id: tid, description: "Tx " + short(sentHash as string, 8) + " is on-chain. Use Refresh shortly to see the result.", action: { label: "Explorer", onClick: () => window.open(txUrl(sentHash as string), "_blank") } }) }
+        if (onDone) onDone()
+      } else if (ambiguous && !execError) {
+        setPhase("waiting")
+        setOpenFn(null); setForm({})
+        toast.loading(a.label + " submitted - confirming on-chain...", { id: tid, description: "Network response was lost, but the transaction may already be on-chain. Reconciling from state\u2026" })
+        setBusy("__sync__")
+        const ok = await waitForStateChange(prevKey, "", tid, a.label)
+        if (!ok) { setPhase(""); toast.message(a.label + " - not confirmed yet", { id: tid, description: "Network was busy and no state change was detected. Tap the action again to retry, or use Refresh if it may still be finalizing." }) }
         if (onDone) onDone()
       } else {
         setPhase("error")
