@@ -2,7 +2,7 @@
 import { useState } from "react"
 import { toast } from "sonner"
 import { useWallet } from "@/hooks/use-wallet"
-import { sendWrite, makeWriteClient, readState } from "@/lib/genlayer"
+import { sendWriteEx, makeWriteClient, readState } from "@/lib/genlayer"
 import { short, txUrl } from "@/lib/format"
 import { Zap } from "lucide-react"
 import { ACTIONS, canDo, phaseOk, whyNot, type ActionDef } from "@/lib/actions"
@@ -16,6 +16,19 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
   const allActions = ACTIONS[projectId] || []
   if (!allActions.length) return null
   const actions = allActions.filter((a) => phaseOk(a, state))
+  async function waitForStateChange(prevKey: string, hash: string, tid: any, label: string) {
+    for (let i = 0; i < 240; i++) {
+      let ns: any = null
+      try { ns = await readState(address) } catch {}
+      if (ns && JSON.stringify({ status: ns.status || "", history: ns.history || "" }) !== prevKey) {
+        setPhase("finished")
+        toast.success(label + " confirmed", { id: tid, description: short(hash, 8), action: { label: "Explorer", onClick: () => window.open(txUrl(hash), "_blank") } })
+        return true
+      }
+      await new Promise((r) => setTimeout(r, 4000))
+    }
+    return false
+  }
   async function run(a: ActionDef) {
     if (!acct) { toast.error("Connect a wallet first"); return }
     const _blocked = !canDo(a, state, acct)
@@ -26,24 +39,35 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
     const value = a.value ? a.value(form) : BigInt(0)
     setBusy(a.fn)
     const tid = toast.loading(a.label + " \u2014 awaiting consensus\u2026")
+    const prevKey = JSON.stringify({ status: (state && state.status) || "", history: (state && state.history) || "" })
+    let sentHash: string | null = null
     try {
       setLastHash(null); setPhase("")
-      const hash = await sendWrite(client, address, a.fn, args, value, (h) => { setLastHash(h); setPhase("waiting"); toast.loading(a.label + " - tx " + short(h, 8) + " - waiting for consensus...", { id: tid, description: "Submitted on-chain. Consensus can take a few minutes.", action: { label: "Explorer", onClick: () => window.open(txUrl(h), "_blank") } }) })
-      setPhase("finished")
-      toast.success(a.label + " confirmed", { id: tid, description: short(hash, 8), action: { label: "Explorer", onClick: () => window.open(txUrl(hash), "_blank") } })
+      const res = await sendWriteEx(client, address, a.fn, args, value, (h) => { sentHash = h; setLastHash(h); setPhase("waiting"); toast.loading(a.label + " - tx " + short(h, 8) + " - waiting for consensus...", { id: tid, description: "Submitted on-chain. Consensus can take a few minutes.", action: { label: "Explorer", onClick: () => window.open(txUrl(h), "_blank") } }) })
+      if (res.confirmed) {
+        setPhase("finished")
+        toast.success(a.label + " confirmed", { id: tid, description: short(res.hash, 8), action: { label: "Explorer", onClick: () => window.open(txUrl(res.hash), "_blank") } })
+      } else {
+        setPhase("waiting")
+        toast.loading(a.label + " submitted - finalizing on-chain...", { id: tid, description: "Tx " + short(res.hash, 8) + " sent. Result appears after consensus.", action: { label: "Explorer", onClick: () => window.open(txUrl(res.hash), "_blank") } })
+      }
       setOpenFn(null); setForm({})
       setBusy("__sync__")
-      const prevKey = JSON.stringify({ status: (state && state.status) || "", history: (state && state.history) || "" })
-      for (let i = 0; i < 240; i++) {
-        let ns: any = null
-        try { ns = await readState(address) } catch {}
-        if (ns && JSON.stringify({ status: ns.status || "", history: ns.history || "" }) !== prevKey) break
-        await new Promise((r) => setTimeout(r, 4000))
-      }
+      await waitForStateChange(prevKey, res.hash, tid, a.label)
       if (onDone) onDone()
     } catch (e: any) {
-      setPhase("error")
-      toast.error(a.label + " failed", { id: tid, description: String(e && e.message ? e.message : e).slice(0, 140) })
+      const msg = String(e && e.message ? e.message : e)
+      const execError = /execution not successful/i.test(msg)
+      if (sentHash && !execError) {
+        setPhase("waiting")
+        toast.loading(a.label + " submitted - still finalizing (network busy)", { id: tid, description: "Tx " + short(sentHash, 8) + " is on-chain. Tap Explorer to track; the dashboard updates automatically.", action: { label: "Explorer", onClick: () => window.open(txUrl(sentHash as string), "_blank") } })
+        setBusy("__sync__")
+        await waitForStateChange(prevKey, sentHash as string, tid, a.label)
+        if (onDone) onDone()
+      } else {
+        setPhase("error")
+        toast.error(a.label + " failed", { id: tid, description: msg.slice(0, 140) })
+      }
     } finally { setBusy(null) }
   }
   function click(a: ActionDef) {
