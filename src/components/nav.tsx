@@ -4,12 +4,13 @@ import { usePathname } from "next/navigation"
 import { useState } from "react"
 import { PROJECTS } from "@/lib/projects"
 import { useApp } from "./providers"
-import { LayoutDashboard, BarChart3, ShieldCheck, TrendingUp, Menu, X, Plus, Radio } from "lucide-react"
+import { LayoutDashboard, BarChart3, ShieldCheck, TrendingUp, Menu, X, Plus, Radio, Scale } from "lucide-react"
 import { WalletButton } from "./wallet-button"
 const ICONS: Record<string, any> = { ShieldCheck, TrendingUp, Radio }
 export function Sidebar() {
   const { projectId, setProjectId, mode, setMode } = useApp()
   const path = usePathname()
+  const onEscrow = (path || "").startsWith("/escrow")
   const [open, setOpen] = useState(false)
   return (
     <>
@@ -23,20 +24,23 @@ export function Sidebar() {
           <div style={{ flex: 1 }}><b>GenLayer</b><span>Builder Dashboard</span></div>
           <button className="btn icon" onClick={() => setOpen(false)}><X size={16} /></button>
         </div>
-        <div className="side-label">Projects</div>
-        {PROJECTS.map((p) => {
-          const Icon = ICONS[p.icon] || ShieldCheck
-          return (
-            <div key={p.id} className={"proj" + (p.id === projectId ? " active" : "")} onClick={() => { setProjectId(p.id); setOpen(false) }}>
-              <div className="ic"><Icon size={16} /></div>
-              <div className="t"><b>{p.name}</b><span>{p.tagline}</span></div>
-            </div>
-          )
-        })}
-        <div className="proj" style={{ opacity: .6 }}><div className="ic"><Plus size={16} /></div><div className="t"><b>Add project</b><span>coming soon</span></div></div>
+        {!onEscrow ? (<>
+          <div className="side-label">Projects</div>
+          {PROJECTS.map((p) => {
+            const Icon = ICONS[p.icon] || ShieldCheck
+            return (
+              <div key={p.id} className={"proj" + (p.id === projectId ? " active" : "")} onClick={() => { setProjectId(p.id); setOpen(false) }}>
+                <div className="ic"><Icon size={16} /></div>
+                <div className="t"><b>{p.name}</b><span>{p.tagline}</span></div>
+              </div>
+            )
+          })}
+          <div className="proj" style={{ opacity: .6 }}><div className="ic"><Plus size={16} /></div><div className="t"><b>Add project</b><span>coming soon</span></div></div>
+        </>) : null}
         <div className="side-label">Navigate</div>
         <Link href="/" className={"navlink" + (path === "/" ? " active" : "")}><LayoutDashboard size={16} /> Overview</Link>
         <Link href="/analytics" className={"navlink" + (path === "/analytics" ? " active" : "")}><BarChart3 size={16} /> Analytics</Link>
+          <Link href="/escrow" className={"navlink" + (onEscrow ? " active" : "")}><Scale size={16} /> AI Escrow Arbiter</Link>
         <div className="side-foot">
           <WalletButton />
           <div className="toggle">
