@@ -88,3 +88,36 @@ Oracle:
 Deployments:
 - Prediction Market deploy: <https://explorer-bradbury.genlayer.com/tx/0x98b5ed21603aabfac25c495d675a8890891427c8576d831f7c95eafc94ab86f9>
 - Content Moderator deploy: <https://explorer-bradbury.genlayer.com/tx/0xa05d3619563ce7ca31f01b34f3f82f89e868c4a4131d5896513339ec6f001867>
+
+
+## AI Escrow Arbiter
+
+Interactive AI-adjudicated escrow, available in the dashboard at the /escrow route.
+
+Live dApp: <https://artem1981777.github.io/genlayer-dashboard/escrow/>
+Contract source: embedded in src/lib/escrow.ts (ESCROW_SOURCE), deployed fresh from the browser per escrow.
+
+Instead of a human middleman, a validator-consensed AI decides whether held funds are released to the seller or refunded to the buyer, based on the escrow terms and the evidence submitted on-chain. The frontend is a full Web3 dApp: EIP-6963 wallet connection, automatic network switch to Testnet Bradbury, browser deployment, funding, evidence submission, AI resolution and payout — every step an on-chain transaction.
+
+Contract methods:
+- __init__(seller, amount_wei, terms): the deployer becomes the buyer
+- fund(): payable, buyer only, requires value == amount; CREATED -> FUNDED
+- submit_evidence(content): buyer or seller, append-only, while FUNDED
+- resolve(): runs the AI arbiter; validators reach consensus on a RELEASE or REFUND verdict with a written reason; FUNDED -> RESOLVED
+- payout(): releases held funds to the seller (RELEASE) or buyer (REFUND); replay-safe; RESOLVED -> PAID
+- get_state / get_status / get_evidence: read-only views
+
+Lifecycle: CREATED -> fund -> FUNDED -> submit evidence -> resolve (AI verdict) -> RESOLVED -> payout -> PAID.
+
+How to use: connect a wallet, click "Create escrow (deploy)", then fund -> submit evidence -> resolve (AI) -> payout. Transient AI-consensus reverts on testnet are retried automatically, and the action buttons never lock up.
+
+### Live escrow contracts (Testnet Bradbury)
+- Portal-registered escrow: 0x6f33FF874366aEd9B071505Ffa1057072b8FC37C
+- Demo escrow (full-cycle run): 0xf1f03acdC836d7A5747C87A280f04b0bC63c3457
+
+### On-chain proof (full lifecycle, all accepted)
+- Deploy: <https://explorer-bradbury.genlayer.com/tx/0x941a8ce197d15fa21fc04c86039c061f63c42129a388ec515c85f707d3afcecb>
+- Fund: <https://explorer-bradbury.genlayer.com/tx/0x4312b3564f114952d95c6e28724748130b33c3d16103383fa2187e48f8877b4d>
+- Evidence: <https://explorer-bradbury.genlayer.com/tx/0x95e04ee1053836ac43c5e0e110faa8ab57b97774741b08fd8c01590c1535cdcd>
+- Resolve (AI verdict): <https://explorer-bradbury.genlayer.com/tx/0x20972b579e6be3b7684951ee542ed99a2d851ee8a1fb05e17ff71890afbe842d>
+- Payout (PAID): <https://explorer-bradbury.genlayer.com/tx/0x3de6b50ec807f43a569c29c870a273f5658b41cf9cdad4f5c3e454df65e74ba7>
