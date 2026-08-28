@@ -7,6 +7,7 @@ import { short, txUrl, addrUrl } from "@/lib/format"
 import { Zap } from "lucide-react"
 import { ACTIONS, canDo, phaseOk, whyNot, type ActionDef } from "@/lib/actions"
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+const AI_SLOW = new Set(["moderate", "enforce", "resolve_appeal"])
 export function ActionsPanel({ projectId, address, onDone, state }: { projectId: string; address: string; onDone?: () => void; state?: any }) {
   const { address: acct, active, wrongNetwork, writeClient, ensureNetwork } = useWallet()
   const [openFn, setOpenFn] = useState<string | null>(null)
@@ -33,6 +34,7 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
     const client = makeWriteClient(acct, active.provider)
     const args = a.build ? a.build(form) : []
     const value = a.value ? a.value(form) : BigInt(0)
+    const slow = AI_SLOW.has(a.fn)
     setBusy(a.fn)
     const tid = toast.loading(a.label + " \u2014 awaiting wallet\u2026")
     const explorerTx = (h: string) => ({ label: "Explorer", onClick: () => window.open(txUrl(h), "_blank") })
@@ -41,12 +43,12 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
     setLastHash(null); setPhase("")
     try {
       const res = await sendWriteEx(client, address, a.fn, args, value, (h) => {
-        // Tx is on-chain: kill the spinner INSTANTLY and re-enable the action after a short cooldown.
+        // Tx is on-chain: kill the spinner INSTANTLY, re-enable the action after a short cooldown.
         sentHash = h; setLastHash(h); setPhase("submitted")
         relBusy(a.fn); addPending(a.fn); setTimeout(() => delPending(a.fn), 8000); setOpenFn(null); setForm({})
-        toast.success(a.label + " submitted on-chain", { id: tid, description: "Tx " + short(h, 8) + " \u2014 finalizing via consensus. The dashboard updates automatically.", action: explorerTx(h) })
-        // Aggressive bounded re-poll so fresh state lands fast (30s).
-        softRefresh(12, 2500)
+        toast.success(a.label + " submitted on-chain", { id: tid, description: "Tx " + short(h, 8) + (slow ? " \u2014 AI consensus in progress, ~1\u20132 min. The verdict appears automatically." : " \u2014 finalizing via consensus. The dashboard updates automatically."), action: explorerTx(h) })
+        // Bounded re-poll: AI actions need ~2.5 min, deterministic ones ~30s.
+        softRefresh(slow ? 30 : 12, slow ? 5000 : 2500)
       })
       if (res.confirmed) {
         setLastHash(res.hash); setPhase("confirmed")
@@ -54,9 +56,9 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
       } else {
         if (!sentHash) setLastHash(res.hash)
         setPhase("submitted")
-        toast.message(a.label + " submitted - finalizing on-chain", { id: tid, description: "Tx " + short(res.hash, 8) + " is on-chain. The dashboard updates automatically.", action: explorerTx(res.hash) })
+        toast.message(a.label + (slow ? " submitted - AI consensus in progress" : " submitted - finalizing on-chain"), { id: tid, description: "Tx " + short(res.hash, 8) + " is on-chain. The dashboard updates automatically" + (slow ? " once moderation completes (~1\u20132 min)." : "."), action: explorerTx(res.hash) })
       }
-      await softRefresh(3, 3000)
+      await softRefresh(slow ? 6 : 3, slow ? 5000 : 3000)
     } catch (e: any) {
       const msg = String(e && e.message ? e.message : e)
       const execError = /execution not successful/i.test(msg)
@@ -67,11 +69,11 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
       } else if (sentHash) {
         setPhase("submitted"); setOpenFn(null); setForm({})
         toast.message(a.label + " submitted - finalizing on-chain", { id: tid, description: "Tx " + short(sentHash, 8) + " is on-chain. Verify on Explorer; the dashboard updates automatically.", action: explorerTx(sentHash as string) })
-        await softRefresh(6, 3000)
+        await softRefresh(slow ? 12 : 6, slow ? 5000 : 3000)
       } else if (ambiguous) {
         setPhase("submitted"); setOpenFn(null); setForm({})
         toast.message(a.label + " submitted - finalizing on-chain", { id: tid, description: "Submitted on-chain. Verify on the contract Explorer; the dashboard updates automatically.", action: explorerAddr })
-        await softRefresh(6, 3000)
+        await softRefresh(slow ? 12 : 6, slow ? 5000 : 3000)
       } else {
         setPhase("error")
         toast.error(a.label + " failed", { id: tid, description: msg.slice(0, 140) })
@@ -86,7 +88,7 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
   return (
     <div className="mt actions">
       {lastHash ? <div className="tag mono mt8" style={{ display: "inline-flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}><span>{(phase === "confirmed" ? "confirmed \u2713" : phase === "error" ? "failed (tx sent)" : phase === "submitted" ? "submitted \u2713 \u00b7 finalizing on-chain" : "submitting\u2026") + " - tx "}</span><a href={txUrl(lastHash)} target="_blank" rel="noreferrer">{short(lastHash, 8)}</a></div> : null}
-      <div className="flex between center"><div className="dim" style={{ fontSize: 12 }}>Actions</div>{pending.length ? <span className="dim" style={{ fontSize: 11.5 }}>finalizing on-chain\u2026 (safe to leave)</span> : null}{!acct ? <span className="dim" style={{ fontSize: 11.5 }}>connect wallet to act</span> : wrongNetwork ? <span style={{ color: "var(--warn)", fontSize: 11.5 }}>wrong network</span> : null}</div>
+      <div className="flex between center"><div className="dim" style={{ fontSize: 12 }}>Actions</div>{pending.length ? <span className="dim" style={{ fontSize: 11.5 }}>finalizing on-chain\u2026 (updates automatically)</span> : null}{!acct ? <span className="dim" style={{ fontSize: 11.5 }}>connect wallet to act</span> : wrongNetwork ? <span style={{ color: "var(--warn)", fontSize: 11.5 }}>wrong network</span> : null}</div>
       <div className="flex gap wrap mt8">{!actions.length ? <span className="dim" style={{ fontSize: 11.5 }}>No actions available for your wallet in this phase</span> : null}
         {actions.map((a) => {
           const isPending = pending.includes(a.fn)
