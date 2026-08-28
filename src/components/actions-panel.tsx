@@ -3,9 +3,10 @@ import { useState } from "react"
 import { toast } from "sonner"
 import { useWallet } from "@/hooks/use-wallet"
 import { sendWriteEx, makeWriteClient, readState } from "@/lib/genlayer"
-import { short, txUrl } from "@/lib/format"
+import { short, txUrl, addrUrl } from "@/lib/format"
 import { Zap } from "lucide-react"
 import { ACTIONS, canDo, phaseOk, whyNot, type ActionDef } from "@/lib/actions"
+function stateSnap(s: any) { try { return JSON.stringify(s || {}) } catch { return String(s) } }
 export function ActionsPanel({ projectId, address, onDone, state }: { projectId: string; address: string; onDone?: () => void; state?: any }) {
   const { address: acct, active, wrongNetwork, writeClient, ensureNetwork } = useWallet()
   const [openFn, setOpenFn] = useState<string | null>(null)
@@ -16,18 +17,20 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
   const allActions = ACTIONS[projectId] || []
   if (!allActions.length) return null
   const actions = allActions.filter((a) => phaseOk(a, state))
-  async function waitForStateChange(prevKey: string, hash: string, tid: any, label: string) {
-    for (let i = 0; i < 240; i++) {
+  async function waitForStateChange(prevSnap: string, hash: string, tid: any, label: string) {
+    const explorerUrl = hash ? txUrl(hash) : addrUrl(address)
+    const explorerAction = { label: "Explorer", onClick: () => window.open(explorerUrl, "_blank") }
+    for (let i = 0; i < 90; i++) {
       let ns: any = null
       try { ns = await readState(address) } catch {}
-      if (ns && JSON.stringify({ status: ns.status || "", history: ns.history || "" }) !== prevKey) {
+      if (ns && stateSnap(ns) !== prevSnap) {
         setPhase("finished")
-        const opts: any = { id: tid, description: hash ? short(hash, 8) : "confirmed on-chain" }
-        if (hash) opts.action = { label: "Explorer", onClick: () => window.open(txUrl(hash), "_blank") }
-        toast.success(label + " confirmed", opts)
+        toast.success(label + " confirmed", { id: tid, description: hash ? short(hash, 8) : "Result is live on the dashboard", action: explorerAction })
+        if (onDone) onDone()
         return true
       }
-      await new Promise((r) => setTimeout(r, 4000))
+      if (ns && onDone && i % 2 === 1) onDone()
+      await new Promise((r) => setTimeout(r, 3000))
     }
     return false
   }
@@ -41,23 +44,24 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
     const value = a.value ? a.value(form) : BigInt(0)
     setBusy(a.fn)
     const tid = toast.loading(a.label + " \u2014 awaiting consensus\u2026")
-    const prevKey = JSON.stringify({ status: (state && state.status) || "", history: (state && state.history) || "" })
+    let prevSnap = stateSnap(state)
+    try { prevSnap = stateSnap(await readState(address)) } catch {}
     let sentHash: string | null = null
     try {
       setLastHash(null); setPhase("")
-      const res = await sendWriteEx(client, address, a.fn, args, value, (h) => { sentHash = h; setLastHash(h); setPhase("waiting"); toast.loading(a.label + " - tx " + short(h, 8) + " - waiting for consensus...", { id: tid, description: "Submitted on-chain. Consensus can take a few minutes.", action: { label: "Explorer", onClick: () => window.open(txUrl(h), "_blank") } }) })
+      const res = await sendWriteEx(client, address, a.fn, args, value, (h) => { sentHash = h; setLastHash(h); setPhase("waiting"); toast.loading(a.label + " - tx " + short(h, 8) + " - waiting for consensus...", { id: tid, description: "Submitted on-chain. The result appears automatically.", action: { label: "Explorer", onClick: () => window.open(txUrl(h), "_blank") } }) })
       setOpenFn(null); setForm({})
       if (res.confirmed) {
         setPhase("finished")
         toast.success(a.label + " confirmed", { id: tid, description: short(res.hash, 8), action: { label: "Explorer", onClick: () => window.open(txUrl(res.hash), "_blank") } })
         setBusy("__sync__")
-        await waitForStateChange(prevKey, res.hash, tid, a.label)
+        await waitForStateChange(prevSnap, res.hash, tid, a.label)
       } else {
         setPhase("waiting")
-        toast.loading(a.label + " submitted - finalizing on-chain...", { id: tid, description: "Tx " + short(res.hash, 8) + " sent. Result appears after consensus.", action: { label: "Explorer", onClick: () => window.open(txUrl(res.hash), "_blank") } })
+        toast.loading(a.label + " - waiting for GenLayer consensus...", { id: tid, description: "Tx " + short(res.hash, 8) + " submitted. The result appears automatically.", action: { label: "Explorer", onClick: () => window.open(txUrl(res.hash), "_blank") } })
         setBusy("__sync__")
-        const ok = await waitForStateChange(prevKey, res.hash, tid, a.label)
-        if (!ok) { setPhase("waiting"); toast.message(a.label + " - still finalizing", { id: tid, description: "Tx " + short(res.hash, 8) + " is on-chain. Use Refresh in a moment; the result appears once consensus completes.", action: { label: "Explorer", onClick: () => window.open(txUrl(res.hash), "_blank") } }) }
+        const ok = await waitForStateChange(prevSnap, res.hash, tid, a.label)
+        if (!ok) { setPhase("waiting"); toast.message(a.label + " - finalizing on-chain", { id: tid, description: "Tx " + short(res.hash, 8) + " is on-chain. The dashboard refreshes automatically; tap Explorer to track.", action: { label: "Explorer", onClick: () => window.open(txUrl(res.hash), "_blank") } }) }
       }
       if (onDone) onDone()
     } catch (e: any) {
@@ -65,20 +69,18 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
       const execError = /execution not successful/i.test(msg)
       const ambiguous = !!(e && e.ambiguous)
       if (sentHash && !execError) {
-        setPhase("waiting")
-        setOpenFn(null); setForm({})
-        toast.loading(a.label + " submitted - still finalizing (network busy)", { id: tid, description: "Tx " + short(sentHash, 8) + " is on-chain. Tap Explorer to track; the dashboard updates automatically.", action: { label: "Explorer", onClick: () => window.open(txUrl(sentHash as string), "_blank") } })
+        setPhase("waiting"); setOpenFn(null); setForm({})
+        toast.loading(a.label + " - waiting for GenLayer consensus...", { id: tid, description: "Tx " + short(sentHash, 8) + " is on-chain. The result appears automatically.", action: { label: "Explorer", onClick: () => window.open(txUrl(sentHash as string), "_blank") } })
         setBusy("__sync__")
-        const ok = await waitForStateChange(prevKey, sentHash as string, tid, a.label)
-        if (!ok) { toast.message(a.label + " - still finalizing", { id: tid, description: "Tx " + short(sentHash as string, 8) + " is on-chain. Use Refresh shortly to see the result.", action: { label: "Explorer", onClick: () => window.open(txUrl(sentHash as string), "_blank") } }) }
+        const ok = await waitForStateChange(prevSnap, sentHash as string, tid, a.label)
+        if (!ok) toast.message(a.label + " - finalizing on-chain", { id: tid, description: "Tx " + short(sentHash as string, 8) + " is on-chain. The dashboard refreshes automatically.", action: { label: "Explorer", onClick: () => window.open(txUrl(sentHash as string), "_blank") } })
         if (onDone) onDone()
       } else if (ambiguous && !execError) {
-        setPhase("waiting")
-        setOpenFn(null); setForm({})
-        toast.loading(a.label + " submitted - confirming on-chain...", { id: tid, description: "Network response was lost, but the transaction may already be on-chain. Reconciling from state\u2026" })
+        setPhase("waiting"); setOpenFn(null); setForm({})
+        toast.loading(a.label + " - waiting for GenLayer consensus...", { id: tid, description: "Submitted on-chain. The result appears automatically once consensus completes." })
         setBusy("__sync__")
-        const ok = await waitForStateChange(prevKey, "", tid, a.label)
-        if (!ok) { setPhase(""); toast.message(a.label + " - not confirmed yet", { id: tid, description: "Network was busy and no state change was detected. Tap the action again to retry, or use Refresh if it may still be finalizing." }) }
+        const ok = await waitForStateChange(prevSnap, "", tid, a.label)
+        if (!ok) { setPhase(""); toast.message(a.label + " - still finalizing", { id: tid, description: "Consensus is taking longer than usual. The dashboard refreshes automatically; if nothing changes, tap the action again.", action: { label: "Explorer", onClick: () => window.open(addrUrl(address), "_blank") } }) }
         if (onDone) onDone()
       } else {
         setPhase("error")
