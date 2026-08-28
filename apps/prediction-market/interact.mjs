@@ -12,11 +12,11 @@ const account = createAccount(PRIVATE_KEY);
 const client = createClient({ chain: testnetBradbury, account });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const read = () => client.readContract({ address: CONTRACT, functionName: "get_state", args: [] });
-const isCollision = (e) => { const m = String(e?.message || e); return m.includes("consensus contract") || m.includes("EVM tx"); };
+const isCollision = (e) => { const m = String(e?.message || e); return m.includes("consensus contract") || m.includes("EVM tx") || m.includes("-32005") || m.includes("capacity") || m.includes("fetch failed") || m.includes("ECONNABORTED") || m.includes("ECONNRESET") || m.includes("timeout"); };
 
 async function submitWrite(fn, args) {
   for (let attempt = 1; attempt <= 25; attempt++) {
-    try { return await client.writeContract({ address: CONTRACT, functionName: fn, args, value: 0 }); }
+    try { return await client.writeContract({ address: CONTRACT, functionName: fn, args, value: 0n }); }
     catch (e) {
       if (isCollision(e)) { console.log("  submit collision (prior tx finalizing), retry in 20s..."); await sleep(20000); continue; }
       throw e;

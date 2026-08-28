@@ -21,12 +21,12 @@ const fail = (n, extra) => { console.log("FAIL -", n, extra ?? ""); failed++; };
 const read = (addr) => client.readContract({ address: addr, functionName: "get_state", args: [] });
 const isRevert = (r) => (r === "FINISHED_WITH_ERROR" || r === "REVERTED");
 const histLen = (s) => { try { return JSON.parse(s?.history || "[]").length; } catch { return 0; } };
-const isCollision = (e) => { const m = String(e?.message || e); return m.includes("consensus contract") || m.includes("EVM tx"); };
+const isCollision = (e) => { const m = String(e?.message || e); return m.includes("consensus contract") || m.includes("EVM tx") || m.includes("-32005") || m.includes("capacity") || m.includes("fetch failed") || m.includes("ECONNABORTED") || m.includes("ECONNRESET") || m.includes("timeout"); };
 
 async function deploy(q, rules, s1, s2, s3) {
   let h = null;
   for (let attempt = 1; attempt <= 25; attempt++) {
-    try { h = await client.deployContract({ code, args: [q, rules, s1, s2, s3] }); break; }
+    try { h = await client.deployContract({ code, args: [q, rules, s1, s2, s3, "eth-merge-pos"] }); break; }
     catch (e) { if (isCollision(e)) { await sleep(20000); continue; } throw e; }
   }
   if (!h) throw new Error("deploy submit failed after retries");
@@ -39,7 +39,7 @@ async function deploy(q, rules, s1, s2, s3) {
 async function call(addr, fn, args) {
   let h = null;
   for (let attempt = 1; attempt <= 25; attempt++) {
-    try { h = await client.writeContract({ address: addr, functionName: fn, args, value: 0 }); break; }
+    try { h = await client.writeContract({ address: addr, functionName: fn, args, value: 0n }); break; }
     catch (e) { if (isCollision(e)) { await sleep(20000); continue; } return "REVERTED"; }
   }
   if (!h) return "SUBMIT_TIMEOUT";

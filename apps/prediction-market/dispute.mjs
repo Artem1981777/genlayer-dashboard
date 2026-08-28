@@ -20,7 +20,7 @@ let h2 = null;
 for (let attempt = 1; attempt <= 15; attempt++) {
   try {
     console.log("dispute submit attempt " + attempt + " ...");
-    h2 = await client.writeContract({ address: CONTRACT, functionName: "dispute", args: [NOTE], value: 0 });
+    h2 = await client.writeContract({ address: CONTRACT, functionName: "dispute", args: [NOTE], value: 0n });
     console.log("dispute tx:", h2);
     break;
   } catch (e) {

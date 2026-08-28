@@ -175,6 +175,9 @@ class PredictionMarketResolver(gl.Contract):
     def dispute(self, reason: str):
         assert self.status == "resolved", "Can only dispute a resolved (not yet settled) market"
         assert len(reason.strip()) > 0, "Dispute must include a reason"
+        caller = str(gl.message.sender_address)
+        mine = self._positions().get(caller)
+        assert isinstance(mine, dict) and (int(mine.get("YES", 0)) + int(mine.get("NO", 0))) > 0, "Only a participant who staked this market can dispute"
         items = self._load_history()
         disputes_so_far = 0
         for it in items:
@@ -183,7 +186,7 @@ class PredictionMarketResolver(gl.Contract):
         assert disputes_so_far < 2, "Dispute limit reached for this market"
         self.dispute_note = reason
         self.status = "disputed"
-        self._append_history("dispute", str(gl.message.sender_address), reason)
+        self._append_history("dispute", caller, reason)
     @gl.public.write
     def resolve_dispute(self):
         caller = str(gl.message.sender_address)
@@ -212,8 +215,8 @@ class PredictionMarketResolver(gl.Contract):
     def void(self):
         caller = str(gl.message.sender_address)
         assert caller == self.creator, "Only the market creator can void"
-        assert self.status in ("open", "resolved"), "Can only void an open or resolved market"
-        assert self.outcome == "UNRESOLVED", "Only an UNRESOLVED market can be voided"
+        assert self.status == "open", "Can only void a market that has not resolved to a definite YES/NO"
+        assert self.outcome in ("", "UNRESOLVED"), "Cannot void a market with a definite YES/NO outcome; settle it instead"
         self.winning_side = ""
         self.status = "voided"
         self.claims = "{}"
@@ -242,7 +245,7 @@ class PredictionMarketResolver(gl.Contract):
         self.claims = json.dumps(claims)
         self._append_history("claim", caller, "payout=" + str(payout))
         if payout > 0:
-            _NativeRecipient(gl.message.sender_address).emit_transfer(value=u256(payout))
+            _NativeRecipient(gl.message.sender_address).emit_transfer(value=u256(payout), on="finalized")
         return payout
     @gl.public.write
     def refund(self) -> int:
@@ -259,5 +262,5 @@ class PredictionMarketResolver(gl.Contract):
         claims[caller] = {"claimed": True, "stake": amount, "payout": amount}
         self.claims = json.dumps(claims)
         self._append_history("refund", caller, "refund=" + str(amount))
-        _NativeRecipient(gl.message.sender_address).emit_transfer(value=u256(amount))
+        _NativeRecipient(gl.message.sender_address).emit_transfer(value=u256(amount), on="finalized")
         return amount
