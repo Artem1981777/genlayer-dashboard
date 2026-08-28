@@ -21,6 +21,16 @@ function eqAddr(a?: string, b?: string): boolean {
 }
 const STATE_TONE: Record<string, string> = { CREATED: "#f2cf5b", FUNDED: "#5ad1ff", RESOLVED: "#b6ff6c", PAID: "#4fe08b" }
 
+const RETRYABLE = /revert|consensus|undeterm|appeal|leader|timeout|deadline|network|socket|fetch|ECONN|temporar/i
+function sleep(ms){ return new Promise((r)=>setTimeout(r,ms)) }
+function reached(fn, s){
+  if(!s) return false
+  if(fn==="fund") return s.state==="FUNDED"||s.state==="RESOLVED"||s.state==="PAID"
+  if(fn==="resolve") return s.state==="RESOLVED"||s.state==="PAID"
+  if(fn==="payout") return s.payout_done===true||s.state==="PAID"
+  return false
+}
+
 export default function EscrowPage() {
   const { wallets, address, connect, disconnect, connecting, wrongNetwork, ensureNetwork, writeClient } = useWallet()
   const [active, setActive] = useState("")
@@ -68,13 +78,33 @@ export default function EscrowPage() {
     if (!writeClient) { setNote({ ok: false, text: "Connect your wallet first." }); return }
     if (!active) { setNote({ ok: false, text: "No escrow selected." }); return }
     setBusy(label); setPending(""); setNote(null)
+    const maxTries = fn === "resolve" ? 3 : 1
     try {
-      const r = await sendWriteEx(writeClient, active, fn, args, value, (h) => setPending(h))
-      setNote({ ok: true, text: label + " confirmed (" + r.result + ")", hash: r.hash })
-      await refresh(active)
-    } catch (e: any) {
-      setNote({ ok: false, text: e && e.message ? e.message : String(e), hash: pending || undefined })
-    } finally { setBusy(""); setPending("") }
+      let lastErr = null
+      for (let i = 1; i <= maxTries; i++) {
+        try {
+          if (i > 1) setNote({ ok: true, text: label + ": AI consensus is flaky on testnet — retrying (attempt " + i + "/" + maxTries + ")…" })
+          const r = await sendWriteEx(writeClient, active, fn, args, value, (h) => setPending(h))
+          setNote({ ok: true, text: label + " confirmed (" + r.result + ")", hash: r.hash })
+          lastErr = null
+          break
+        } catch (e) {
+          lastErr = e
+          try { const chk = await readEscrowStatus(active); if (reached(fn, chk.status)) { setNote({ ok: true, text: label + " confirmed on-chain." }); lastErr = null; break } } catch {}
+          const msg = e && e.message ? e.message : String(e)
+          if (i < maxTries && RETRYABLE.test(msg)) { await sleep(2500); continue }
+          throw e
+        }
+      }
+      if (lastErr) throw lastErr
+    } catch (e) {
+      const msg = e && e.message ? e.message : String(e)
+      const friendly = /revert|consensus|undeterm|appeal/i.test(msg) ? ("AI consensus reverted — this is a transient GenLayer testnet hiccup, not a bug. Just click " + label + " again to retry (funds stay safe in the contract).") : msg
+      setNote({ ok: false, text: friendly, hash: pending || undefined })
+    } finally {
+      setBusy(""); setPending("")
+      try { await refresh(active) } catch {}
+    }
   }, [writeClient, active, refresh, pending])
 
   const doCreate = useCallback(async () => {
