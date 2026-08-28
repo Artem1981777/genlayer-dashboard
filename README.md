@@ -1,6 +1,6 @@
 # GenLayer Consensus Console
 
-Interactive multi-contract dApp on GenLayer Testnet Bradbury. A thin browser client that submits real inputs to three deployed Intelligent Contracts and reads their on-chain state. Every consensus-critical decision (moderation verdicts, market outcomes, oracle values) is computed and stored on-chain by the contracts; the frontend never decides anything.
+Interactive multi-contract dApp on GenLayer Testnet Bradbury. A thin browser client that submits real inputs to four Intelligent Contracts (three long-lived plus an on-demand AI escrow) and reads their on-chain state. Every consensus-critical decision (moderation verdicts, market outcomes, oracle values, escrow settlements) is computed and stored on-chain by the contracts; the frontend never decides anything.
 
 Live app: <https://artem1981777.github.io/genlayer-dashboard/>
 
@@ -40,6 +40,7 @@ Source: apps/multi-source-oracle/contracts/oracle.py
 - Content Moderator: 0xc87881c7223e1d47Bf13EBDC50ADFaA0d0EFC4dC
 - Content Moderator (portal-registered revision): 0x235f51b11b9f96d6673df37553ef58373c4324f9
 - Multi-Source Oracle: 0x8D0d10E81fE03E418F575A9040494A94D2013a67
+- AI Escrow Arbiter (portal-registered): 0x6f33FF874366aEd9B071505Ffa1057072b8FC37C
 
 ## Write lifecycle
 
