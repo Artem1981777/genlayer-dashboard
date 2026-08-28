@@ -21,6 +21,7 @@ export const PROJECTS: ProjectDef[] = [
       "0xF83a360cBA484C09E34018D3FF2f3800d6470DC3",
       "0x0747802565F083d1784ED3f8Ff973Bf0920A61ea",
       "0xD7E2ef74a1ACAAF579E97b2843Cac02EefE15A2c",
+      "0x235f51b11b9f96d6673df37553ef58373c4324f9",
     ],
   },
   {
@@ -41,7 +42,6 @@ export const PROJECTS: ProjectDef[] = [
       "0xd5fbdf280d1726079d3741B4E18BaD656851A34d",
       "0x86d36795b66c29A7445945585a4C9f09C289C8ba",
       "0x5853abFE0CBF83ac65cd3DACFB35Bb1B0314C969",
-      
     ],
   },
   {
