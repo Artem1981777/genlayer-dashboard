@@ -1,14 +1,13 @@
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
 import "./globals.css"
 import { Providers } from "@/components/providers"
 import { Sidebar } from "@/components/nav"
 import { Toaster } from "sonner"
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
+const fontStyle = { "--font-inter": "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" } as React.CSSProperties
 export const metadata: Metadata = { title: "GenLayer Builder Dashboard", description: "Unified dashboard for GenLayer Intelligent Contracts." }
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" style={fontStyle}>
       <body>
         <Providers>
           <div className="app">
