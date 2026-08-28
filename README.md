@@ -2,7 +2,7 @@
 
 Interactive multi-contract dApp on GenLayer Testnet Bradbury. A thin browser client that submits real inputs to three deployed Intelligent Contracts and reads their on-chain state. Every consensus-critical decision (moderation verdicts, market outcomes, oracle values) is computed and stored on-chain by the contracts; the frontend never decides anything.
 
-Live app: https://artem1981777.github.io/genlayer-dashboard/
+Live app: <https://artem1981777.github.io/genlayer-dashboard/>
 
 ## Intelligent Contracts
 
@@ -19,24 +19,26 @@ Validators reason over a natural-language policy via a custom equivalence-princi
 ### Prediction Market
 Source: apps/prediction-market/contracts/prediction_market.py
 
-- stake(side): payable; takes ONE side argument (YES or NO) and requires a positive value
+- stake(side): payable; takes ONE side argument (YES or NO) and requires a strictly positive value
 - resolve(): creator only; resolves from cited web sources
-- dispute(reason): on a resolved market
+- dispute(reason): gated — resolved market only, non-empty reason, and the caller must actually hold a stake in this market; max 2 dispute rounds
 - resolve_dispute(): creator only, on a disputed market
 - settle(): creator only; resolved market with a YES or NO outcome
-- claim(): after settlement
+- void(): creator only; only while status is open and the outcome is not yet a definite YES/NO -> moves the market to voided
+- claim(): gated — settled market only, requires the caller's winning stake > 0, pays a pari-mutuel payout, single-use (anti-double-claim)
+- refund(): voided market only; returns each staker's full position 1:1 via emit_transfer(value=u256(...), on="finalized"), single-use (anti-double-refund)
 
 ### Multi-Source Oracle
 Source: apps/multi-source-oracle/contracts/oracle.py
 
-- update(key): public; aggregates a median BTC/USD from 3 independent sources (Coinbase, CoinGecko, Kraken) with tolerance and max-spread guards
+- update(key): public; aggregates a median BTC/USD from 3 independent sources (Coinbase, CoinGecko, Kraken). Every publication-critical field — success flag, decimals, spread (bps), source count and sample provenance — is validator-checked or derived only from validated data, so nothing is published unless the validators independently agree. Deterministic, no LLM. Guards: tolerance 200 bps, max spread 500 bps
 - register_feed / remove_feed: owner only
 
 ## Live contracts (Testnet Bradbury)
 
-- Prediction Market (open): 0xd5fbdf280d1726079d3741B4E18BaD656851A34d
-- Content Moderator (interactive, pending): 0x16cD8F92DEdDBdF27E7bc8c53633C61Dbb352307
-- Multi-Source Oracle: 0xfdE0d2cBD651FC3E7c14fFEc7D981A05E2969DCC
+- Prediction Market: 0xdE2C020445cC5627Fa7E36b3f12FBcb5f781F70F
+- Content Moderator: 0xc87881c7223e1d47Bf13EBDC50ADFaA0d0EFC4dC
+- Multi-Source Oracle: 0x8D0d10E81fE03E418F575A9040494A94D2013a67
 
 ## Write lifecycle
 
@@ -62,15 +64,26 @@ Action buttons render only when the action is actually executable for the connec
 
 ## Tests
 
-40 tests, no mocks (vitest):
+40 unit tests, no mocks (vitest):
 
 - src/lib/actions.test.ts: 25 unit tests for role/phase visibility across all three contracts, plus whyNot messages
 - src/lib/projects.test.ts and src/lib/store.test.ts: config and tracked-contract store
 - src/lib/genlayer.test.ts and src/lib/live-moderator.test.ts: live get_state reads against deployed contracts
 
+Deterministic on-chain payable + gating tests (no LLM): apps/prediction-market/test-payable.mjs — 8 checks: zero-value stake reverts, claim-before-settle reverts, dispute-before-resolve reverts, payable stake recorded, void (open -> voided), refund 1:1, double-refund reverts, re-void reverts.
+
 Run: npm install, then npm test, then npm run build
 
 ## On-chain proof
 
-- Successful Stake: https://explorer-bradbury.genlayer.com/tx/0x996e9e349164a28f61826561485b2e33317708586f4202365c6d6da7c53d5f4a
-- Successful Stake: https://explorer-bradbury.genlayer.com/tx/0x8311614e2fde0c813a68c4b3e08aecd847c52819cb81dffd42f5fa5545e9c070
+Payable path (stake -> void -> refund, 1:1):
+- Stake (payable, positive value): <https://explorer-bradbury.genlayer.com/tx/0x6e60e4b9fb093010c6df26873f6e31b38f692bd1c033a47f33212be72cb4c0c6>
+- Void (open -> voided): <https://explorer-bradbury.genlayer.com/tx/0x0723f61bf6ccc432517befb98e89170f040762867c6934f5a5ffdef01dc33026>
+- Refund (payout == stake): <https://explorer-bradbury.genlayer.com/tx/0x90d456a0204286248e10fd703548450a506ecaf3ab9c7ef00240b3850bf11d52>
+
+Oracle:
+- Update (round 2, btc_usd=80404.66, spread 3 bps, ACCEPTED): <https://explorer-bradbury.genlayer.com/tx/0xefc533f5359633a9c5eb441bff63be24d9ba01552393198a5188be1f9efaeba2>
+
+Deployments:
+- Prediction Market deploy: <https://explorer-bradbury.genlayer.com/tx/0x98b5ed21603aabfac25c495d675a8890891427c8576d831f7c95eafc94ab86f9>
+- Content Moderator deploy: <https://explorer-bradbury.genlayer.com/tx/0xa05d3619563ce7ca31f01b34f3f82f89e868c4a4131d5896513339ec6f001867>
