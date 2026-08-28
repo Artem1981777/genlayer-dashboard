@@ -41,12 +41,12 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
     setLastHash(null); setPhase("")
     try {
       const res = await sendWriteEx(client, address, a.fn, args, value, (h) => {
-        // Tx is on-chain: kill the spinner IMMEDIATELY. Never block the UI on consensus.
+        // Tx is on-chain: kill the spinner INSTANTLY and re-enable the action after a short cooldown.
         sentHash = h; setLastHash(h); setPhase("submitted")
-        relBusy(a.fn); addPending(a.fn); setOpenFn(null); setForm({})
+        relBusy(a.fn); addPending(a.fn); setTimeout(() => delPending(a.fn), 8000); setOpenFn(null); setForm({})
         toast.success(a.label + " submitted on-chain", { id: tid, description: "Tx " + short(h, 8) + " \u2014 finalizing via consensus. The dashboard updates automatically.", action: explorerTx(h) })
-        // Background refresh so fresh state lands without holding the button.
-        softRefresh(6, 3000)
+        // Aggressive bounded re-poll so fresh state lands fast (30s).
+        softRefresh(12, 2500)
       })
       if (res.confirmed) {
         setLastHash(res.hash); setPhase("confirmed")
@@ -56,7 +56,7 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
         setPhase("submitted")
         toast.message(a.label + " submitted - finalizing on-chain", { id: tid, description: "Tx " + short(res.hash, 8) + " is on-chain. The dashboard updates automatically.", action: explorerTx(res.hash) })
       }
-      await softRefresh(4, 3000)
+      await softRefresh(3, 3000)
     } catch (e: any) {
       const msg = String(e && e.message ? e.message : e)
       const execError = /execution not successful/i.test(msg)

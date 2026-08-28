@@ -52,12 +52,15 @@ function execName(tx: any): string {
   if (!tx) return ""
   return String(tx.txExecutionResultName ?? tx.tx_execution_result_name ?? tx.execution_result ?? "").toUpperCase()
 }
+// Confirms via the DIRECT RPC read client (never the wallet provider).
+// HARD 30s deadline: always resolves, never hangs. Transport errors -> PENDING (UI already has the hash).
 async function confirmByReceipt(hash: string): Promise<string> {
   const rc = readClient()
+  const deadline = Date.now() + 30000
   let transient = 0
-  for (let attempt = 0; attempt < 5; attempt++) {
+  while (Date.now() < deadline) {
     try {
-      const receipt: any = await rc.waitForTransactionReceipt({ hash, status: TransactionStatus.ACCEPTED, interval: 4000, retries: 45, fullTransaction: false })
+      const receipt: any = await rc.waitForTransactionReceipt({ hash, status: TransactionStatus.ACCEPTED, interval: 3000, retries: 8, fullTransaction: false })
       const exec = execName(receipt)
       return exec || "ACCEPTED"
     } catch (e: any) {
@@ -69,7 +72,8 @@ async function confirmByReceipt(hash: string): Promise<string> {
         if (st === "UNDETERMINED") return "UNDETERMINED"
       } catch {}
       transient++
-      if (pollRetriable(msg) && transient <= 8) { await sleep(4000); continue }
+      if (ambiguousTransport(msg)) return "PENDING"
+      if (pollRetriable(msg) && transient <= 6 && Date.now() < deadline) { await sleep(3000); continue }
       throw e
     }
   }
