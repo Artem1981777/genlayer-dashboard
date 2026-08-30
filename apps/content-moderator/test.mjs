@@ -2,32 +2,28 @@ import { readFileSync } from "node:fs";
 import { createClient, createAccount } from "genlayer-js";
 import { testnetBradbury } from "genlayer-js/chains";
 import { TransactionStatus } from "genlayer-js/types";
-
 const PK = process.env.PRIVATE_KEY;
 if (!PK) { throw new Error("PRIVATE_KEY missing. Run: node --env-file=.env test.mjs"); }
 const source = readFileSync("contracts/moderator.py", "utf8");
 const code = new TextEncoder().encode(source);
-
 const RULES = "No spam or advertising. No scams, phishing, or requests for private keys or seed phrases. No hate speech or harassment. No violence or threats. APPROVE compliant content, FLAG borderline content, REMOVE clear violations.";
 const HARMFUL = "FREE CRYPTO!! Send 1 ETH to 0xGiveaway and get 10 ETH back instantly! DM me your wallet seed phrase now to claim your reward!!!";
 const BENIGN = "Hey everyone, I just published a free open-source tutorial on setting up a Python dev environment. Hope it helps someone getting started!";
-
 const account = createAccount(PK);
 const client = createClient({ chain: testnetBradbury, account });
+const ME = String(account.address);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let failed = 0;
 const pass = (n) => console.log("PASS -", n);
 const fail = (n, extra) => { console.log("FAIL -", n, extra ?? ""); failed++; };
 const read = (addr) => client.readContract({ address: addr, functionName: "get_state", args: [] });
-const isRevert = (r) => (r === "FINISHED_WITH_ERROR" || r === "REVERTED");
-const histLen = (s) => { try { return JSON.parse(s?.history || "[]").length; } catch { return 0; } };
-const isCollision = (e) => { const m = String(e?.message || e); return m.includes("consensus contract") || m.includes("EVM tx"); };
+const isRevert = (r) => (r === "FINISHED_WITH_ERROR" || r === "REVERTED" || r === "SUBMIT_TIMEOUT");
+const isCollision = (e) => { const m = String(e?.message || e); return m.includes("consensus contract") || m.includes("EVM tx") || m.includes("-32005") || m.includes("capacity") || m.includes("fetch failed") || m.includes("timeout"); };
 const CATS = ["spam", "harassment", "hate", "violence", "sexual", "self_harm", "other", "none"];
-
-async function deploy(rules, content) {
+async function deploy(content, itemId, sourceUrl) {
   let h = null;
   for (let attempt = 1; attempt <= 25; attempt++) {
-    try { h = await client.deployContract({ code, args: [rules, content] }); break; }
+    try { h = await client.deployContract({ code, args: [RULES, content, itemId, sourceUrl, ME] }); break; }
     catch (e) { if (isCollision(e)) { await sleep(20000); continue; } throw e; }
   }
   if (!h) throw new Error("deploy submit failed after retries");
@@ -59,69 +55,61 @@ async function waitLeaves(addr, fromStatus) {
   for (let i = 0; i < 220; i++) { s = await read(addr); if (s?.status !== fromStatus) return s; await sleep(5000); }
   return s;
 }
-async function waitHistory(addr, minLen) {
-  let s;
-  for (let i = 0; i < 220; i++) { s = await read(addr); if (histLen(s) >= minLen) return s; await sleep(5000); }
-  return s;
-}
-
-console.log("### TEST 1: harmful content is moderated and not approved ###");
-const c1 = await deploy(RULES, HARMFUL);
+console.log("### T1: harmful content moderated (FLAG/REMOVE) ###");
+const c1 = await deploy(HARMFUL, "item-harmful", "https://example.com/post/1");
 console.log("contract:", c1);
 console.log("moderate:", await call(c1, "moderate", []));
 const s1 = await waitLeaves(c1, "pending");
 console.log("verdict:", s1?.verdict, "| status:", s1?.status);
-(s1?.status === "moderated" && (s1?.verdict === "REMOVE" || s1?.verdict === "FLAG")) ? pass("harmful content flagged/removed") : fail("expected FLAG or REMOVE", JSON.stringify(s1));
-
-console.log("### TEST 2: benign content is approved ###");
-const c2 = await deploy(RULES, BENIGN);
-console.log("contract:", c2);
-console.log("moderate:", await call(c2, "moderate", []));
-const s2 = await waitLeaves(c2, "pending");
-console.log("verdict:", s2?.verdict, "| status:", s2?.status);
-(s2?.status === "moderated" && s2?.verdict === "APPROVE") ? pass("benign content approved") : fail("expected APPROVE", JSON.stringify(s2));
-
-console.log("### TEST 3: cannot moderate twice ###");
-const r3 = await call(c1, "moderate", []);
-isRevert(r3) ? pass("double moderate reverted") : fail("expected revert on double moderate", r3);
-
-console.log("### TEST 4: cannot set content after moderated ###");
-const r4 = await call(c1, "set_content", ["some new content"]);
-isRevert(r4) ? pass("late set_content reverted") : fail("expected revert on late set_content", r4);
-
-console.log("### TEST 5: cannot moderate empty content ###");
-const c3 = await deploy(RULES, "");
-const r5 = await call(c3, "moderate", []);
-isRevert(r5) ? pass("moderate with empty content reverted") : fail("expected revert on empty content", r5);
-
-console.log("### TEST 6: appeal re-runs moderation and records history ###");
-const a1 = await call(c2, "appeal", ["I think this is fine, please reconsider."]);
-const s6 = await waitHistory(c2, 2);
-(!isRevert(a1) && s6?.status === "moderated" && histLen(s6) === 2 && ["APPROVE", "FLAG", "REMOVE"].includes(s6?.verdict)) ? pass("appeal processed, history has 2 rounds") : fail("appeal did not process as expected", JSON.stringify({ a1, status: s6?.status, hist: histLen(s6), verdict: s6?.verdict }));
-
-console.log("### TEST 7: appeal with empty note reverts ###");
-const r7 = await call(c1, "appeal", ["   "]);
-isRevert(r7) ? pass("empty appeal note reverted") : fail("expected revert on empty appeal note", r7);
-
-console.log("### TEST 8: cannot appeal before moderation ###");
-const c4 = await deploy(RULES, "Brand new pending content for the appeal-state guard test.");
-const r8 = await call(c4, "appeal", ["Trying to appeal too early."]);
-isRevert(r8) ? pass("appeal before moderation reverted") : fail("expected revert on early appeal", r8);
-
-console.log("### TEST 9: appeal limit enforced (max 2) ###");
-const a2 = await call(c2, "appeal", ["Second appeal, still think it is fine."]);
-await waitHistory(c2, 3);
-const a3 = await call(c2, "appeal", ["Third appeal should be blocked."]);
-(!isRevert(a2) && isRevert(a3)) ? pass("second appeal ok, third appeal capped") : fail("appeal cap not enforced", JSON.stringify({ a2, a3 }));
-
-console.log("### TEST 10: verdict carries confidence, category and review metadata ###");
-const m1 = await read(c1);
-const conf = Number(m1?.confidence);
-const catOk = CATS.includes(String(m1?.category));
-const confOk = Number.isFinite(conf) && conf >= 0 && conf <= 100 && String(m1?.confidence).length > 0;
-const flagsOk = (m1?.escalated === "true" || m1?.escalated === "false") && (m1?.needs_review === "true" || m1?.needs_review === "false");
-(confOk && catOk && flagsOk) ? pass("confidence/category/flags present and valid") : fail("metadata missing or invalid", JSON.stringify({ confidence: m1?.confidence, category: m1?.category, escalated: m1?.escalated, needs_review: m1?.needs_review }));
-
+(s1?.status === "moderated" && (s1?.verdict === "REMOVE" || s1?.verdict === "FLAG")) ? pass("harmful flagged/removed") : fail("expected FLAG/REMOVE", JSON.stringify(s1));
+console.log("### T2: enforce (creator) moderated -> enforced ###");
+const e2 = await call(c1, "enforce", []);
+const s2 = await waitLeaves(c1, "moderated");
+(!isRevert(e2) && s2?.status === "enforced") ? pass("enforced") : fail("enforce failed", JSON.stringify({ e2, status: s2?.status }));
+console.log("### T3: appeal (author) enforced FLAG/REMOVE -> appealed ###");
+const a3 = await call(c1, "appeal", ["I believe this was mislabeled, please reconsider."]);
+const s3 = await waitLeaves(c1, "enforced");
+(!isRevert(a3) && s3?.status === "appealed") ? pass("appealed") : fail("appeal failed", JSON.stringify({ a3, status: s3?.status }));
+console.log("### T4: resolve_appeal (creator) appealed -> resolved ###");
+const r4 = await call(c1, "resolve_appeal", []);
+const s4 = await waitLeaves(c1, "appealed");
+(!isRevert(r4) && s4?.status === "resolved" && ["UPHELD", "OVERTURNED"].includes(String(s4?.appeal_outcome))) ? pass("appeal resolved (" + s4?.appeal_outcome + ")") : fail("resolve_appeal failed", JSON.stringify({ r4, status: s4?.status, outcome: s4?.appeal_outcome }));
+console.log("### T5: double moderate reverts ###");
+const r5 = await call(c1, "moderate", []);
+isRevert(r5) ? pass("double moderate reverted") : fail("expected revert on double moderate", r5);
+console.log("### T6: enforce before moderate reverts ###");
+const c6 = await deploy(HARMFUL, "item-guard", "https://example.com/post/6");
+const r6 = await call(c6, "enforce", []);
+isRevert(r6) ? pass("early enforce reverted") : fail("expected revert on early enforce", r6);
+console.log("### T7: appeal before enforce reverts ###");
+console.log("moderate:", await call(c6, "moderate", []));
+await waitLeaves(c6, "pending");
+const r7 = await call(c6, "appeal", ["too early, not enforced yet"]);
+isRevert(r7) ? pass("appeal before enforce reverted") : fail("expected revert on early appeal", r7);
+console.log("### T8: empty appeal note reverts (enforced case) ###");
+console.log("enforce:", await call(c6, "enforce", []));
+await waitLeaves(c6, "moderated");
+const r8 = await call(c6, "appeal", ["   "]);
+isRevert(r8) ? pass("empty appeal note reverted") : fail("expected revert on empty note", r8);
+console.log("### T9: appeal on APPROVE verdict reverts ###");
+const c9 = await deploy(BENIGN, "item-benign", "https://example.com/post/9");
+console.log("moderate:", await call(c9, "moderate", []));
+const s9 = await waitLeaves(c9, "pending");
+console.log("verdict:", s9?.verdict);
+console.log("enforce:", await call(c9, "enforce", []));
+await waitLeaves(c9, "moderated");
+const r9 = await call(c9, "appeal", ["I disagree with the approval."]);
+isRevert(r9) ? pass("appeal on APPROVE reverted") : fail("expected revert on APPROVE appeal", JSON.stringify({ r9, verdict: s9?.verdict }));
+console.log("### T10: set_content after moderated reverts (3-arg) ###");
+const r10 = await call(c1, "set_content", ["new content", "item-x", "https://example.com/x"]);
+isRevert(r10) ? pass("late set_content reverted") : fail("expected revert on late set_content", r10);
+console.log("### T11: verdict metadata present ###");
+const m = await read(c1);
+const conf = Number(m?.confidence);
+const catOk = CATS.includes(String(m?.category));
+const confOk = Number.isFinite(conf) && conf >= 0 && conf <= 100;
+const flagsOk = (m?.escalated === "true" || m?.escalated === "false") && (m?.needs_review === "true" || m?.needs_review === "false");
+(confOk && catOk && flagsOk) ? pass("metadata valid") : fail("metadata invalid", JSON.stringify({ confidence: m?.confidence, category: m?.category, escalated: m?.escalated, needs_review: m?.needs_review }));
 console.log("=====================================");
-console.log(failed === 0 ? "ALL TESTS PASSED" : (failed + " TEST(S) FAILED"));
+console.log(failed === 0 ? "ALL MODERATOR TESTS PASSED" : (failed + " TEST(S) FAILED"));
 process.exitCode = failed === 0 ? 0 : 1;

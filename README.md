@@ -4,6 +4,16 @@ Interactive multi-contract dApp on GenLayer Testnet Bradbury. A thin browser cli
 
 Live app: <https://artem1981777.github.io/genlayer-dashboard/>
 
+## Reviewer fixes -- round 2
+
+Round-1 review by steward Gen. Dave raised three points; each is addressed below with the fix location and on-chain / test proof.
+
+| # | Reviewer comment | Fix (file) | Proof |
+| --- | --- | --- | --- |
+| 1 | Dashboard omitted void/refund and gated claim/dispute only by phase | void() and refund() are now first-class UI actions; gating rewritten to check actual per-caller preconditions from get_state (claim: settled + winning stake > 0 + not yet claimed; dispute: resolved + caller staked + < 2 rounds + non-empty reason). Buttons disable with a tooltip reason instead of hiding. src/lib/actions.ts, src/lib/actions.test.ts (37 tests); tracked contract -> 0x3d17bD6d87563cB172E7C634341fBc8A14574035 | [void](https://explorer-bradbury.genlayer.com/tx/0x0723f61bf6ccc432517befb98e89170f040762867c6934f5a5ffdef01dc33026), [refund 1:1](https://explorer-bradbury.genlayer.com/tx/0x90d456a0204286248e10fd703548450a506ecaf3ab9c7ef00240b3850bf11d52); deterministic 8/8 payable suite |
+| 2 | Oracle published leader-supplied provenance/count/spread without binding them to validator recomputation | After consensus every published field (success, decimals, median, spread_bps, sources_used, provenance) is re-derived from data each validator independently fetched and corroborated (>= 2 sources within tolerance); provenance is part of the compared result. apps/multi-source-oracle/contracts/oracle.py; redeployed -> 0x2Ab508Bb9Be84ea4ea8388b9b8872017729a2C82 | [update](https://explorer-bradbury.genlayer.com/tx/0x5c3f94b50f9dc8c705f12bec8b5d37fffc3e0ef379eb44b2402c366cf2258c72) (state carries provenance[] source->value, spread_bps=2, sources_used=3) |
+| 3 | Behavioral scripts used obsolete dispute and moderation transitions | Every .mjs aligned to current constructors and state machines (PM resolve->dispute->resolve_dispute->settle->claim plus void/refund; moderator moderate->enforce->appeal->resolve_appeal) with added coverage: void+refund happy path, refund anti-double, claim/dispute gating, full appeal cycle. apps/prediction-market/test.mjs, apps/prediction-market/test-payable.mjs, apps/content-moderator/test.mjs | deterministic 8/8 payable/gating suite green; lifecycle + appeal-cycle scripts run vs fresh Bradbury contracts |
+
 ## Intelligent Contracts
 
 ### Content Moderator
@@ -31,15 +41,15 @@ Source: apps/prediction-market/contracts/prediction_market.py
 ### Multi-Source Oracle
 Source: apps/multi-source-oracle/contracts/oracle.py
 
-- update(key): public; aggregates a median BTC/USD from 3 independent sources (Coinbase, CoinGecko, Kraken). Every publication-critical field — success flag, decimals, spread (bps), source count and sample provenance — is validator-checked or derived only from validated data, so nothing is published unless the validators independently agree. Deterministic, no LLM. Guards: tolerance 200 bps, max spread 500 bps
+- update(key): public; aggregates a median BTC/USD from 3 independent sources (Coinbase, CoinGecko, Kraken). Every publication-critical field — success flag, decimals, spread (bps), source count and sample provenance — is validator-checked or derived only from validated data, so nothing is published unless the validators independently agree. Deterministic, no LLM. Guards: tolerance 100 bps, max spread 500 bps
 - register_feed / remove_feed: owner only
 
 ## Live contracts (Testnet Bradbury)
 
-- Prediction Market: 0xdE2C020445cC5627Fa7E36b3f12FBcb5f781F70F
+- Prediction Market: 0x3d17bD6d87563cB172E7C634341fBc8A14574035
 - Content Moderator: 0xc87881c7223e1d47Bf13EBDC50ADFaA0d0EFC4dC
 - Content Moderator (portal-registered revision): 0x235f51b11b9f96d6673df37553ef58373c4324f9
-- Multi-Source Oracle: 0x8D0d10E81fE03E418F575A9040494A94D2013a67
+- Multi-Source Oracle: 0x2Ab508Bb9Be84ea4ea8388b9b8872017729a2C82
 - AI Escrow Arbiter (portal-registered): 0x6f33FF874366aEd9B071505Ffa1057072b8FC37C
 
 ## Write lifecycle
@@ -66,9 +76,9 @@ Action buttons render only when the action is actually executable for the connec
 
 ## Tests
 
-40 unit tests, no mocks (vitest):
+52 unit tests, no mocks (vitest):
 
-- src/lib/actions.test.ts: 25 unit tests for role/phase visibility across all three contracts, plus whyNot messages
+- src/lib/actions.test.ts: 37 unit tests for role/phase visibility, per-caller claim/dispute gating and whyNot messages across all three contracts
 - src/lib/projects.test.ts and src/lib/store.test.ts: config and tracked-contract store
 - src/lib/genlayer.test.ts and src/lib/live-moderator.test.ts: live get_state reads against deployed contracts
 
@@ -84,10 +94,12 @@ Payable path (stake -> void -> refund, 1:1):
 - Refund (payout == stake): <https://explorer-bradbury.genlayer.com/tx/0x90d456a0204286248e10fd703548450a506ecaf3ab9c7ef00240b3850bf11d52>
 
 Oracle:
-- Update (round 2, btc_usd=80404.66, spread 3 bps, ACCEPTED): <https://explorer-bradbury.genlayer.com/tx/0xefc533f5359633a9c5eb441bff63be24d9ba01552393198a5188be1f9efaeba2>
+- Update (hardened, btc_usd=78213.9, 3 sources, spread 2 bps; provenance bound to validator recomputation): <https://explorer-bradbury.genlayer.com/tx/0x5c3f94b50f9dc8c705f12bec8b5d37fffc3e0ef379eb44b2402c366cf2258c72>
 
 Deployments:
-- Prediction Market deploy: <https://explorer-bradbury.genlayer.com/tx/0x98b5ed21603aabfac25c495d675a8890891427c8576d831f7c95eafc94ab86f9>
+- Prediction Market deploy (fresh, void/refund + gating): <https://explorer-bradbury.genlayer.com/tx/0xb7406f6a8788600e04d1a6bdc1200269f2665683c97b9d9e338450ca6a815063>
+- Multi-Source Oracle deploy (hardened): <https://explorer-bradbury.genlayer.com/tx/0x75446ed8583355ad8b6738d3e4e3d03296049fb7c3c1a05825d3e8979dc0d20c>
+- Oracle register_feed (btc_usd, 3 sources): <https://explorer-bradbury.genlayer.com/tx/0xc3d01a735038c563162e6b345c6e7a18c71ce4d8100fd0b9a37aa84a7962f652>
 - Content Moderator deploy: <https://explorer-bradbury.genlayer.com/tx/0xa05d3619563ce7ca31f01b34f3f82f89e868c4a4131d5896513339ec6f001867>
 
 
@@ -122,3 +134,10 @@ How to use: connect a wallet, click "Create escrow (deploy)", then fund -> submi
 - Evidence: <https://explorer-bradbury.genlayer.com/tx/0x95e04ee1053836ac43c5e0e110faa8ab57b97774741b08fd8c01590c1535cdcd>
 - Resolve (AI verdict): <https://explorer-bradbury.genlayer.com/tx/0x20972b579e6be3b7684951ee542ed99a2d851ee8a1fb05e17ff71890afbe842d>
 - Payout (PAID): <https://explorer-bradbury.genlayer.com/tx/0x3de6b50ec807f43a569c29c870a273f5658b41cf9cdad4f5c3e454df65e74ba7>
+
+## Changelog
+
+### Round 2 (reviewer resubmission)
+- Prediction Market: void() and refund() surfaced as real UI actions; claim/dispute gating rewritten to per-caller on-chain preconditions with disabled + tooltip buttons (src/lib/actions.ts, 37 unit tests). Tracked contract redeployed -> 0x3d17bD6d87563cB172E7C634341fBc8A14574035.
+- Multi-Source Oracle: update() hardened so every published field is re-derived from validator-corroborated data with provenance bound into the compared result. Redeployed -> 0x2Ab508Bb9Be84ea4ea8388b9b8872017729a2C82; btc_usd feed re-registered.
+- Scripts: all .mjs aligned to current constructors and state machines; added void/refund, anti-double, claim/dispute gating and full appeal-cycle coverage. Deterministic payable/gating suite 8/8.

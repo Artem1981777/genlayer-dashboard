@@ -102,8 +102,9 @@ isRevert(t3) ? pass("dispute before resolve reverted") : fail("expected revert o
 
 console.log("### T4: stake YES (positive value) records position ###");
 const t4 = await call(c, "stake", ["YES"], STAKE);
-const s4 = await read(c);
-const p4 = myPos(s4);
+let s4 = await read(c);
+let p4 = myPos(s4);
+for (let i = 0; i < 60 && !(!isRevert(t4) && Number(s4.yes_pool) === Number(STAKE) && p4 && Number(p4.YES) === Number(STAKE)); i++) { await sleep(5000); s4 = await read(c); p4 = myPos(s4); }
 (!isRevert(t4) && Number(s4.yes_pool) === Number(STAKE) && p4 && Number(p4.YES) === Number(STAKE)) ? pass("payable stake recorded") : fail("stake not recorded", JSON.stringify({ t4, yes_pool: s4.yes_pool, p4 }));
 
 console.log("### T5: void (creator) open -> voided ###");

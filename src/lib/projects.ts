@@ -39,9 +39,7 @@ export const PROJECTS: ProjectDef[] = [
       { value: "UNRESOLVED", label: "Unresolved", tone: "muted" },
     ],
     seedContracts: [
-      "0xd5fbdf280d1726079d3741B4E18BaD656851A34d",
-      "0x86d36795b66c29A7445945585a4C9f09C289C8ba",
-      "0x5853abFE0CBF83ac65cd3DACFB35Bb1B0314C969",
+      "0x3d17bD6d87563cB172E7C634341fBc8A14574035",
     ],
   },
   {
@@ -51,10 +49,10 @@ export const PROJECTS: ProjectDef[] = [
     icon: "Radio",
     accent: "#5ad1ff",
     repo: "https://github.com/Artem1981777/genlayer-multi-source-oracle",
-    demo: "https://explorer-bradbury.genlayer.com/address/0x8D0d10E81fE03E418F575A9040494A94D2013a67",
+    demo: "https://explorer-bradbury.genlayer.com/address/0x2Ab508Bb9Be84ea4ea8388b9b8872017729a2C82",
     decisionField: "verdict",
     decisions: [],
-    seedContracts: ["0x8D0d10E81fE03E418F575A9040494A94D2013a67"],
+    seedContracts: ["0x2Ab508Bb9Be84ea4ea8388b9b8872017729a2C82"],
   },
 ]
 export const getProject = (id: string) => PROJECTS.find((p) => p.id === id) || PROJECTS[0]

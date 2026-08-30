@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest"
 import { PROJECTS, getProject } from "./projects"
 
-const CM = "0x235F51b11b9F96d6673df37553Ef58373c4324F9"
-const MOD = "0x16cD8F92DEdDBdF27E7bc8c53633C61Dbb352307"
-const PM = "0xd5fbdf280d1726079d3741B4E18BaD656851A34d"
+const CM = "0x235f51b11b9f96d6673df37553ef58373c4324f9"
+const MOD = "0x2d8257E5C7343f40F7Da5380E0d26b599a6036DE"
+const PM = "0x3d17bD6d87563cB172E7C634341fBc8A14574035"
 const ADDR = /^0x[0-9a-fA-F]{40}$/
 
 describe("projects config", () => {
