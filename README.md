@@ -10,7 +10,7 @@ Round-1 review by steward Gen. Dave raised three points; each is addressed below
 
 | # | Reviewer comment | Fix (file) | Proof |
 | --- | --- | --- | --- |
-| 1 | Dashboard omitted void/refund and gated claim/dispute only by phase | void() and refund() are now first-class UI actions; gating rewritten to check actual per-caller preconditions from get_state (claim: settled + winning stake > 0 + not yet claimed; dispute: resolved + caller staked + < 2 rounds + non-empty reason). Buttons disable with a tooltip reason instead of hiding. src/lib/actions.ts, src/lib/actions.test.ts (37 tests); tracked contract -> 0x3d17bD6d87563cB172E7C634341fBc8A14574035 | [void](https://explorer-bradbury.genlayer.com/tx/0x0723f61bf6ccc432517befb98e89170f040762867c6934f5a5ffdef01dc33026), [refund 1:1](https://explorer-bradbury.genlayer.com/tx/0x90d456a0204286248e10fd703548450a506ecaf3ab9c7ef00240b3850bf11d52); deterministic 8/8 payable suite |
+| 1 | Dashboard omitted void/refund and gated claim/dispute only by phase | void() and refund() are now first-class UI actions; gating rewritten to check actual per-caller preconditions from get_state (claim: settled + winning stake > 0 + not yet claimed; dispute: resolved + caller staked + < 2 rounds + non-empty reason). Buttons disable with a tooltip reason instead of hiding. src/lib/actions.ts, src/lib/actions.test.ts (39 tests); tracked contract -> 0x3d17bD6d87563cB172E7C634341fBc8A14574035 | [void](https://explorer-bradbury.genlayer.com/tx/0x0723f61bf6ccc432517befb98e89170f040762867c6934f5a5ffdef01dc33026), [refund 1:1](https://explorer-bradbury.genlayer.com/tx/0x90d456a0204286248e10fd703548450a506ecaf3ab9c7ef00240b3850bf11d52); deterministic 8/8 payable suite |
 | 2 | Oracle published leader-supplied provenance/count/spread without binding them to validator recomputation | After consensus every published field (success, decimals, median, spread_bps, sources_used, provenance) is re-derived from data each validator independently fetched and corroborated (>= 2 sources within tolerance); provenance is part of the compared result. apps/multi-source-oracle/contracts/oracle.py; redeployed -> 0x2Ab508Bb9Be84ea4ea8388b9b8872017729a2C82 | [update](https://explorer-bradbury.genlayer.com/tx/0x5c3f94b50f9dc8c705f12bec8b5d37fffc3e0ef379eb44b2402c366cf2258c72) (state carries provenance[] source->value, spread_bps=2, sources_used=3) |
 | 3 | Behavioral scripts used obsolete dispute and moderation transitions | Every .mjs aligned to current constructors and state machines (PM resolve->dispute->resolve_dispute->settle->claim plus void/refund; moderator moderate->enforce->appeal->resolve_appeal) with added coverage: void+refund happy path, refund anti-double, claim/dispute gating, full appeal cycle. apps/prediction-market/test.mjs, apps/prediction-market/test-payable.mjs, apps/content-moderator/test.mjs | deterministic 8/8 payable/gating suite green; lifecycle + appeal-cycle scripts run vs fresh Bradbury contracts |
 
@@ -76,9 +76,9 @@ Action buttons render only when the action is actually executable for the connec
 
 ## Tests
 
-52 unit tests, no mocks (vitest):
+54 unit tests, no mocks (vitest):
 
-- src/lib/actions.test.ts: 37 unit tests for role/phase visibility, per-caller claim/dispute gating and whyNot messages across all three contracts
+- src/lib/actions.test.ts: 39 unit tests for role/phase visibility, per-caller claim/dispute gating (incl. non-empty dispute reason and shared-claims refund guard) and whyNot messages across all three contracts
 - src/lib/projects.test.ts and src/lib/store.test.ts: config and tracked-contract store
 - src/lib/genlayer.test.ts and src/lib/live-moderator.test.ts: live get_state reads against deployed contracts
 
@@ -138,6 +138,7 @@ How to use: connect a wallet, click "Create escrow (deploy)", then fund -> submi
 ## Changelog
 
 ### Round 2 (reviewer resubmission)
-- Prediction Market: void() and refund() surfaced as real UI actions; claim/dispute gating rewritten to per-caller on-chain preconditions with disabled + tooltip buttons (src/lib/actions.ts, 37 unit tests). Tracked contract redeployed -> 0x3d17bD6d87563cB172E7C634341fBc8A14574035.
+- Prediction Market: void() and refund() surfaced as real UI actions; claim/dispute gating rewritten to per-caller on-chain preconditions with disabled + tooltip buttons (src/lib/actions.ts, 39 unit tests). Tracked contract redeployed -> 0x3d17bD6d87563cB172E7C634341fBc8A14574035.
 - Multi-Source Oracle: update() hardened so every published field is re-derived from validator-corroborated data with provenance bound into the compared result. Redeployed -> 0x2Ab508Bb9Be84ea4ea8388b9b8872017729a2C82; btc_usd feed re-registered.
 - Scripts: all .mjs aligned to current constructors and state machines; added void/refund, anti-double, claim/dispute gating and full appeal-cycle coverage. Deterministic payable/gating suite 8/8.
+- Reviewer nits: dispute now requires a non-empty reason in the UI (validated before submit, mirroring the on-chain assert len(reason.strip()) > 0); refund double-spend gating made explicit via alreadyRefunded over the shared on-chain claims map; unit suite 52 -> 54.

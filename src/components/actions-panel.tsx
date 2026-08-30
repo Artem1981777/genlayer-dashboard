@@ -28,7 +28,8 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
   async function run(a: ActionDef) {
     if (!acct) { toast.error("Connect a wallet first"); return }
     if (!canDo(a, state, acct)) { toast.error(whyNot(a, state, acct)); return }
-    if (!active) { toast.error("Connect a wallet first"); return }
+    if (a.validate) { const vmsg = a.validate(form); if (vmsg) { toast.error(vmsg); return } }
+      if (!active) { toast.error("Connect a wallet first"); return }
     if (busy || pending.includes(a.fn)) return
     try { let cid = String(await active.provider.request({ method: "eth_chainId" })).toLowerCase(); if (cid !== "0x107d") { toast.error("Switching to GenLayer Bradbury..."); await ensureNetwork(); cid = String(await active.provider.request({ method: "eth_chainId" })).toLowerCase() }; if (cid !== "0x107d") { toast.error("Wrong network - switch to Bradbury to continue"); return } } catch (ne) { toast.error("Network check failed"); return }
     const client = makeWriteClient(acct, active.provider)
@@ -120,7 +121,7 @@ export function ActionsPanel({ projectId, address, onDone, state }: { projectId:
               )}
             </div>
           ))}
-          <button className="btn primary" disabled={busy !== null} onClick={() => run(activeDef)}>{busy ? "\u2026" : "Submit " + activeDef.label}</button>
+          <button className="btn primary" disabled={busy !== null || (activeDef.validate ? !!activeDef.validate(form) : false)} title={activeDef.validate ? (activeDef.validate(form) || "") : ""} onClick={() => run(activeDef)}>{busy ? "\u2026" : "Submit " + activeDef.label}</button>
         </div>
       ) : null}
     </div>

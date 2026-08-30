@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { ACTIONS, canDo, whyNot, visibleActions, isCreator, isAuthor, hasStake, winningStake, alreadyClaimed, disputeRounds } from "./actions"
+import { ACTIONS, canDo, whyNot, visibleActions, isCreator, isAuthor, hasStake, winningStake, alreadyClaimed, alreadyRefunded, disputeRounds } from "./actions"
 const CREATOR = "0x198a1952BD58984281f57CF824d264cdbd412814"
 const AUTHOR = "0xB596E244aabBccDDeeFF00112233445566778899"
 const JUDGE = "0xdc6778C5F8cC74b10aED11c48306D4Cfc5737FBD"
@@ -58,4 +58,10 @@ describe("identity + helpers", () => {
     const st = { winning_side: "NO", positions: posOf({ [JUDGE]: { YES: 0, NO: 30 } }), claims: posOf({ [JUDGE]: { claimed: true } }), history: disputes(1) }
     expect(hasStake(st, JUDGE)).toBe(true); expect(winningStake(st, JUDGE)).toBe(30); expect(alreadyClaimed(st, JUDGE)).toBe(true); expect(disputeRounds(st)).toBe(1)
   })
+})
+
+describe("field validation + refund record", () => {
+  const disp = find("dispute")
+  it("dispute requires non-empty reason", () => { expect(disp.validate!({ reason: "" })).toBe("Enter a reason to dispute"); expect(disp.validate!({ reason: "   " })).toBe("Enter a reason to dispute"); expect(disp.validate!({ reason: "re-check sources" })).toBeNull() })
+  it("refund double-spend gated by shared claims map", () => { const st = { status: "voided", creator: CREATOR, positions: posOf({ [JUDGE]: { YES: 0, NO: 80 } }), claims: posOf({ [JUDGE]: { claimed: true } }) }; expect(alreadyRefunded(st, JUDGE)).toBe(true); expect(whyNot(find("refund"), st, JUDGE)).toBe("Already refunded") })
 })

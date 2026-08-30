@@ -6,6 +6,7 @@ export type ActionDef = {
   role?: "creator" | "author"; phase?: (st: any) => boolean
   enabled?: (st: any, acct?: string | null) => boolean
   why?: (st: any, acct?: string | null) => string | null
+  validate?: (v: Record<string, string>) => string | null
 }
 export const isCreator = (st: any, acct?: string | null) => !!(acct && st && st.creator && String(acct).toLowerCase() === String(st.creator).toLowerCase())
 export const isAuthor = (st: any, acct?: string | null) => !!(acct && st && st.author && String(acct).toLowerCase() === String(st.author).toLowerCase())
@@ -22,6 +23,8 @@ export const hasStake = (st: any, acct?: string | null) => { const p = myPositio
 export const winningStake = (st: any, acct?: string | null) => { const p = myPosition(st, acct); return st && st.winning_side === "YES" ? p.YES : st && st.winning_side === "NO" ? p.NO : 0 }
 export const claimRecord = (st: any, acct?: string | null) => { if (!acct || !st) return null; const c = parseObj(st.claims); const k = findKey(c, acct); return k ? c[k] : null }
 export const alreadyClaimed = (st: any, acct?: string | null) => { const c = claimRecord(st, acct); return !!(c && c.claimed) }
+// refund() writes into the same "claims" map claim() uses (both set claimed:true), so double-refund is gated by the same record.
+export const alreadyRefunded = (st: any, acct?: string | null) => alreadyClaimed(st, acct)
 export const disputeRounds = (st: any): number => { if (!st) return 0; try { const h = typeof st.history === "string" ? JSON.parse(st.history) : st.history; return Array.isArray(h) ? h.filter((it: any) => it && it.kind === "dispute").length : 0 } catch { return 0 } }
 export const canVoid = (st: any) => !!(st && st.status === "open" && (st.outcome === "" || st.outcome === "UNRESOLVED" || st.outcome === undefined))
 // ---- gating primitives ----
@@ -39,11 +42,11 @@ export const ACTIONS: Record<string, ActionDef[]> = {
     { fn: "stake", label: "Stake", tone: "ok", fields: [ { key: "side", label: "Side", type: "select", options: ["YES", "NO"] }, { key: "amount", label: "Amount (wei)", type: "number", placeholder: "100" } ], build: (v) => [v.side || "YES"], value: (v) => BigInt(Math.max(1, Math.floor(Number(v.amount || "1")))), phase: (st) => st && st.status === "open" },
     { fn: "resolve", label: "Resolve", role: "creator", phase: (st) => st && st.status === "open" },
     { fn: "void", label: "Void", tone: "warn", role: "creator", phase: (st) => st && st.status === "open", enabled: (st) => canVoid(st), why: () => "Cannot void a market with a definite YES/NO outcome; settle it instead" },
-    { fn: "dispute", label: "Dispute", tone: "warn", fields: [ { key: "reason", label: "Reason", type: "text", placeholder: "Requesting re-review of the cited sources" } ], build: (v) => [v.reason || ""], phase: (st) => st && st.status === "resolved", enabled: (st, acct) => hasStake(st, acct) && disputeRounds(st) < 2, why: (st, acct) => !hasStake(st, acct) ? "Only a participant who staked this market can dispute" : disputeRounds(st) >= 2 ? "Dispute limit reached (max 2) for this market" : null },
+    { fn: "dispute", label: "Dispute", tone: "warn", fields: [ { key: "reason", label: "Reason", type: "text", placeholder: "Requesting re-review of the cited sources" } ], build: (v) => [v.reason || ""], phase: (st) => st && st.status === "resolved", validate: (v) => (v && v.reason && v.reason.trim().length > 0) ? null : "Enter a reason to dispute", enabled: (st, acct) => hasStake(st, acct) && disputeRounds(st) < 2, why: (st, acct) => !hasStake(st, acct) ? "Only a participant who staked this market can dispute" : disputeRounds(st) >= 2 ? "Dispute limit reached (max 2) for this market" : null },
     { fn: "resolve_dispute", label: "Resolve dispute", role: "creator", phase: (st) => st && st.status === "disputed" },
     { fn: "settle", label: "Settle", role: "creator", phase: (st) => st && st.status === "resolved" && (st.outcome === "YES" || st.outcome === "NO") },
     { fn: "claim", label: "Claim", tone: "ok", phase: (st) => st && st.status === "settled", enabled: (st, acct) => winningStake(st, acct) > 0 && !alreadyClaimed(st, acct), why: (st, acct) => winningStake(st, acct) <= 0 ? "No winning stake to claim" : alreadyClaimed(st, acct) ? "Already claimed" : null },
-    { fn: "refund", label: "Refund", tone: "ok", phase: (st) => st && st.status === "voided", enabled: (st, acct) => hasStake(st, acct) && !alreadyClaimed(st, acct), why: (st, acct) => !hasStake(st, acct) ? "Nothing to refund" : alreadyClaimed(st, acct) ? "Already refunded" : null },
+    { fn: "refund", label: "Refund", tone: "ok", phase: (st) => st && st.status === "voided", enabled: (st, acct) => hasStake(st, acct) && !alreadyRefunded(st, acct), why: (st, acct) => !hasStake(st, acct) ? "Nothing to refund" : alreadyRefunded(st, acct) ? "Already refunded" : null },
   ],
   moderator: [
     { fn: "moderate", label: "Moderate", tone: "ok", phase: (st) => st && st.status === "pending" },
