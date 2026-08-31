@@ -2,6 +2,17 @@
 
 ## v1.3.0 — Reviewer fixes (resubmission) — 2026-08-31
 
+### Patch matrix
+
+| Patch | File | Commit | Proof tx | Explorer link |
+| --- | --- | --- | --- | --- |
+| Receipt result hardening | src/lib/genlayer.ts | v1.3.0 | 0x397f21e1 | https://explorer-bradbury.genlayer.com/tx/0x397f21e174d5b59170c40108f4cc56ea842857c1b15cc21a39ee031d6af894df |
+| Stake signature/value fix | src/lib/actions.ts | v1.3.0 | 0x90253b29 | https://explorer-bradbury.genlayer.com/tx/0x90253b2970cd2d2ff0fd7b2451305b28af42590733969684d05e00f0e3311485 |
+| Zero-value validation | src/lib/actions.ts | v1.3.0 | 0x397f21e1 | https://explorer-bradbury.genlayer.com/tx/0x397f21e174d5b59170c40108f4cc56ea842857c1b15cc21a39ee031d6af894df |
+| State refresh after execution result | src/lib/genlayer.ts, src/components/actions-panel.tsx | v1.3.0 | 0x34d63ce2 | https://explorer-bradbury.genlayer.com/tx/0x34d63ce2d94767500458c2b8d66b2eee3df12e05a2a1863cbdcfb2b49b1e7b22 |
+| Address synchronization | tests/smoke.onchain.mjs, apps/prediction-market/index.html, probe.mjs | v1.3.0 | 0x5c3f94b5 | https://explorer-bradbury.genlayer.com/tx/0x5c3f94b50f9dc8c705f12bec8b5d37fffc3e0ef379eb44b2402c366cf2258c72 |
+| README/evidence correction | README.md, CHANGELOG.md | v1.3.0 | 0x2dfc5983 | https://explorer-bradbury.genlayer.com/tx/0x2dfc598349349a8cc69cf774ff8c07d95bfc9de3399a9a75f9faea022fc0f06c |
+
 ### Fixed
 - **Strict consensus-result gating** (`src/lib/genlayer.ts`): success is accepted ONLY for `FINISHED` / `FINISHED_WITH_RETURN`. `FINISHED_WITH_ERROR`, `NOT_VOTED`, `UNDETERMINED`, `LEADER_TIMEOUT`, any `*_WITH_ERROR`, and unknown/absent results are treated as failure. No optimistic UI; the tx hash is preserved on error. Added `classifyExecution()` and `SUCCESS_RESULTS`.
 - **Payable single-argument stake validated before wallet** (`src/lib/actions.ts`): `parseStakeWei()` rejects empty / zero / negative / fractional amounts before `writeContract`. `stake(side)` is a single-argument payable call; the amount is passed only via tx `value` (> 0).

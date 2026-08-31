@@ -45,3 +45,4 @@ apps/prediction-market/fix-pm-deploy.mjs
 *.pre_v130
 *.pre_ev
 .env
+*.pre_addr

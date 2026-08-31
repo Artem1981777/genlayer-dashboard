@@ -182,3 +182,30 @@ How to use: connect a wallet, click "Create escrow (deploy)", then fund -> submi
 - Multi-Source Oracle: update() hardened so every published field is re-derived from validator-corroborated data with provenance bound into the compared result. Redeployed -> 0x2Ab508Bb9Be84ea4ea8388b9b8872017729a2C82; btc_usd feed re-registered.
 - Scripts: all .mjs aligned to current constructors and state machines; added void/refund, anti-double, claim/dispute gating and full appeal-cycle coverage. Deterministic payable/gating suite 8/8.
 - Reviewer nits: dispute now requires a non-empty reason in the UI (validated before submit, mirroring the on-chain assert len(reason.strip()) > 0); refund double-spend gating made explicit via alreadyRefunded over the shared on-chain claims map; unit suite 52 -> 54.
+
+## Reviewer fixes — action → source → proof matrix
+
+Every advertised write action maps to committed contract source and a real Testnet Bradbury transaction. Prediction Market lifecycle was exercised deterministically (no LLM) against a dedicated test instance `0x8D0c1f6b433f12a937081f7f1FbBDC3Fd51B41B1`; the production PM is `0x3d17bD6d87563cB172E7C634341fBc8A14574035`.
+
+| Action | Source file | Contract address | Proof transaction | Result |
+| --- | --- | --- | --- | --- |
+| stake (zero-value, rejected) | apps/prediction-market/contracts/prediction_market.py | 0x8D0c1f6b433f12a937081f7f1FbBDC3Fd51B41B1 | https://explorer-bradbury.genlayer.com/tx/0x397f21e174d5b59170c40108f4cc56ea842857c1b15cc21a39ee031d6af894df | FINISHED_WITH_ERROR (expected reject) |
+| stake (YES, value>0) | apps/prediction-market/contracts/prediction_market.py | 0x8D0c1f6b433f12a937081f7f1FbBDC3Fd51B41B1 | https://explorer-bradbury.genlayer.com/tx/0x90253b2970cd2d2ff0fd7b2451305b28af42590733969684d05e00f0e3311485 | FINISHED_WITH_RETURN |
+| claim (before settle, gated) | apps/prediction-market/contracts/prediction_market.py | 0x8D0c1f6b433f12a937081f7f1FbBDC3Fd51B41B1 | https://explorer-bradbury.genlayer.com/tx/0x3a77877ef6fb216b1f75ca6e2ec87d3ddb7330f2e4eca82a254f58a967f52ff6 | reverted (expected) |
+| dispute (before resolve, gated) | apps/prediction-market/contracts/prediction_market.py | 0x8D0c1f6b433f12a937081f7f1FbBDC3Fd51B41B1 | https://explorer-bradbury.genlayer.com/tx/0x2080382c3c2952842022174fd3a8913e18a7ae43749c89eff847bef2ab94b5f4 | reverted (expected) |
+| void | apps/prediction-market/contracts/prediction_market.py | 0x8D0c1f6b433f12a937081f7f1FbBDC3Fd51B41B1 | https://explorer-bradbury.genlayer.com/tx/0x34d63ce2d94767500458c2b8d66b2eee3df12e05a2a1863cbdcfb2b49b1e7b22 | FINISHED_WITH_RETURN |
+| refund (1:1) | apps/prediction-market/contracts/prediction_market.py | 0x8D0c1f6b433f12a937081f7f1FbBDC3Fd51B41B1 | https://explorer-bradbury.genlayer.com/tx/0x89a8c4a523512ad31c088ba8ca35e2d7c446d68e2615f8b3c5f6ca6d5e128adb | FINISHED_WITH_RETURN |
+| refund (double, gated) | apps/prediction-market/contracts/prediction_market.py | 0x8D0c1f6b433f12a937081f7f1FbBDC3Fd51B41B1 | https://explorer-bradbury.genlayer.com/tx/0xb14778bf16655213ad6fd6b8c497aca63d04bd6ab94875e0bb7473b6000193ef | reverted (expected) |
+| void (re-void, gated) | apps/prediction-market/contracts/prediction_market.py | 0x8D0c1f6b433f12a937081f7f1FbBDC3Fd51B41B1 | https://explorer-bradbury.genlayer.com/tx/0xf32b0042e531bf49c7642a40fdb1b3bc5f807c7bf2414fe766c5d4eaa68774d9 | reverted (expected) |
+| update (oracle) | apps/multi-source-oracle/contracts/oracle.py | 0x2Ab508Bb9Be84ea4ea8388b9b8872017729a2C82 | https://explorer-bradbury.genlayer.com/tx/0x5c3f94b50f9dc8c705f12bec8b5d37fffc3e0ef379eb44b2402c366cf2258c72 | FINALIZED (status 7) |
+| moderate | apps/content-moderator/contracts/moderator.py | 0x235F51b11b9F96d6673df37553Ef58373c4324F9 | https://explorer-bradbury.genlayer.com/tx/0x2dfc598349349a8cc69cf774ff8c07d95bfc9de3399a9a75f9faea022fc0f06c | REMOVE |
+| enforce | apps/content-moderator/contracts/moderator.py | 0x235F51b11b9F96d6673df37553Ef58373c4324F9 | https://explorer-bradbury.genlayer.com/tx/0x50cd96099418f555d91b4e4d27288902940a1b7793780bb96a50dc434cb5bde4 | blocked |
+| appeal | apps/content-moderator/contracts/moderator.py | 0x235F51b11b9F96d6673df37553Ef58373c4324F9 | https://explorer-bradbury.genlayer.com/tx/0x8578d3e39d485c106d7e33ea35aa74793b441545ca9be70f09a4227219652e79 | recorded |
+| resolve_appeal | apps/content-moderator/contracts/moderator.py | 0x235F51b11b9F96d6673df37553Ef58373c4324F9 | https://explorer-bradbury.genlayer.com/tx/0x14fa4e5b4bfdd1eb488c31b2894391d5f65d2459e806112133f51c047e4513c5 | UPHELD |
+
+## Known limitations
+
+- `gen_getContractSchema` on Bradbury currently returns `VMError: invalid_contract absent_runner_comment`, so machine-readable schemas are not attached; action-to-source parity is proven by committed contract sources plus the real on-chain executions above.
+- GenLayer-js does not emit a bare `FINISHED` in practice — successful writes surface as `FINISHED_WITH_RETURN`. The gate accepts both; the bare `FINISHED` case is covered by unit tests.
+- `create_item`, `ingest`, `fund_pool`, `reverify_source` are contract/maintenance methods not surfaced as user write-actions in this dApp UI, so they are out of scope for the UI lifecycle gate (not reproduced as UI transactions).
+- PM lifecycle proofs ran against a dedicated test instance (`0x8D0c…41B1`) to keep production market state clean; the production PM is `0x3d17…4035`.
