@@ -65,3 +65,30 @@ describe("field validation + refund record", () => {
   it("dispute requires non-empty reason", () => { expect(disp.validate!({ reason: "" })).toBe("Enter a reason to dispute"); expect(disp.validate!({ reason: "   " })).toBe("Enter a reason to dispute"); expect(disp.validate!({ reason: "re-check sources" })).toBeNull() })
   it("refund double-spend gated by shared claims map", () => { const st = { status: "voided", creator: CREATOR, positions: posOf({ [JUDGE]: { YES: 0, NO: 80 } }), claims: posOf({ [JUDGE]: { claimed: true } }) }; expect(alreadyRefunded(st, JUDGE)).toBe(true); expect(whyNot(find("refund"), st, JUDGE)).toBe("Already refunded") })
 })
+
+import { parseStakeWei } from "./actions"
+describe("stake amount validation (strict, pre-wallet)", () => {
+  const stake = ACTIONS.prediction.find((a) => a.fn === "stake")!
+  it("parseStakeWei rejects empty/zero/negative/fractional/non-numeric", () => {
+    expect(parseStakeWei("")).toBeNull()
+    expect(parseStakeWei("0")).toBeNull()
+    expect(parseStakeWei("-5")).toBeNull()
+    expect(parseStakeWei("1.5")).toBeNull()
+    expect(parseStakeWei("abc")).toBeNull()
+    expect(parseStakeWei(" 10 ")).toBe(10n)
+    expect(parseStakeWei("100")).toBe(100n)
+  })
+  it("stake.validate blocks bad side/amount and passes valid input", () => {
+    expect(stake.validate!({ side: "YES", amount: "0" })).toMatch(/positive/i)
+    expect(stake.validate!({ side: "YES", amount: "" })).toMatch(/positive/i)
+    expect(stake.validate!({ side: "YES", amount: "-1" })).toMatch(/positive/i)
+    expect(stake.validate!({ side: "YES", amount: "1.2" })).toMatch(/positive/i)
+    expect(stake.validate!({ side: "MAYBE", amount: "10" })).toMatch(/side/i)
+    expect(stake.validate!({ side: "YES", amount: "100" })).toBeNull()
+    expect(stake.validate!({ side: "NO", amount: "1" })).toBeNull()
+  })
+  it("stake.value returns exact positive wei and throws on invalid", () => {
+    expect(stake.value!({ amount: "250", side: "YES" })).toBe(250n)
+    expect(() => stake.value!({ amount: "0", side: "YES" })).toThrow()
+  })
+})

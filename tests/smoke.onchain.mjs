@@ -24,7 +24,7 @@ async function readState(name, address) {
 }
 
 const CM = "0x235F51b11b9F96d6673df37553Ef58373c4324F9"
-const PM = "0x72f6BE503a8319A40515641536C1d74378623914"
+const PM = "0x3d17bD6d87563cB172E7C634341fBc8A14574035"
 let ok = true
 ok = (await readState("Content Moderator", CM)) && ok
 ok = (await readState("Prediction Market", PM)) && ok

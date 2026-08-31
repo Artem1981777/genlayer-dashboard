@@ -85,7 +85,7 @@ export default function EscrowPage() {
         try {
           if (i > 1) setNote({ ok: true, text: label + ": AI consensus is flaky on testnet — retrying (attempt " + i + "/" + maxTries + ")…" })
           const r = await sendWriteEx(writeClient, active, fn, args, value, (h) => setPending(h))
-          setNote({ ok: true, text: label + " confirmed (" + r.result + ")", hash: r.hash })
+          setNote(r.confirmed ? { ok: true, text: label + " confirmed (" + r.result + ")", hash: r.hash } : { ok: true, text: label + " submitted, finalizing on-chain (" + r.result + "). Verify on Explorer.", hash: r.hash })
           lastErr = null
           break
         } catch (e) {

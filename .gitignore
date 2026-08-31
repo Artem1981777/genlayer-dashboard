@@ -42,3 +42,6 @@ next-env.d.ts
 patch-*.mjs
 apps/prediction-market/fix-pm-deploy.mjs
 *.bak
+*.pre_v130
+*.pre_ev
+.env

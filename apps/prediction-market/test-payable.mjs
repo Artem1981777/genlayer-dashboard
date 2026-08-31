@@ -61,6 +61,7 @@ async function call(addr, fn, args, value) {
   try { h = await robust(fn + " submit", () => client.writeContract({ address: addr, functionName: fn, args, value: value || 0n })); }
   catch (e) { return "REVERTED"; }
   if (!h) return "SUBMIT_TIMEOUT";
+  console.log("EVIDENCE hash " + fn + " = " + h);
   try { await robust(fn + " wait", () => client.waitForTransactionReceipt({ hash: h, status: TransactionStatus.ACCEPTED, retries: 300 })); }
   catch (e) { return "REVERTED"; }
   for (let i = 0; i < 120; i++) {

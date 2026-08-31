@@ -10,6 +10,13 @@ export type ActionDef = {
 }
 export const isCreator = (st: any, acct?: string | null) => !!(acct && st && st.creator && String(acct).toLowerCase() === String(st.creator).toLowerCase())
 export const isAuthor = (st: any, acct?: string | null) => !!(acct && st && st.author && String(acct).toLowerCase() === String(st.author).toLowerCase())
+// strict positive-integer wei parser for stake: rejects empty, zero, negative, fractional, non-numeric.
+export const parseStakeWei = (raw: any): bigint | null => {
+  const s = String(raw ?? "").trim()
+  if (!/^\d+$/.test(s)) return null
+  const n = BigInt(s)
+  return n > 0n ? n : null
+}
 // ---- per-caller helpers: read the same JSON the contract stores in get_state ----
 const parseObj = (raw: any): Record<string, any> => { try { const v = typeof raw === "string" ? JSON.parse(raw) : raw; return v && typeof v === "object" && !Array.isArray(v) ? v : {} } catch { return {} } }
 const num = (x: any) => { const n = Number(x); return Number.isFinite(n) ? n : 0 }
@@ -39,7 +46,7 @@ export const whyNot = (a: ActionDef, st: any, acct?: string | null): string =>
   : ""
 export const ACTIONS: Record<string, ActionDef[]> = {
   prediction: [
-    { fn: "stake", label: "Stake", tone: "ok", fields: [ { key: "side", label: "Side", type: "select", options: ["YES", "NO"] }, { key: "amount", label: "Amount (wei)", type: "number", placeholder: "100" } ], build: (v) => [v.side || "YES"], value: (v) => BigInt(Math.max(1, Math.floor(Number(v.amount || "1")))), phase: (st) => st && st.status === "open" },
+    { fn: "stake", label: "Stake", tone: "ok", fields: [ { key: "side", label: "Side", type: "select", options: ["YES", "NO"] }, { key: "amount", label: "Amount (wei)", type: "number", placeholder: "100" } ], build: (v) => [v.side || "YES"], value: (v) => { const w = parseStakeWei(v.amount); if (w === null) throw new Error("Enter a whole, strictly positive wei amount before staking"); return w }, validate: (v) => (v.side !== "YES" && v.side !== "NO") ? "Choose a side (YES or NO)" : parseStakeWei(v.amount) === null ? "Enter a whole, strictly positive wei amount (no zero, negative or fractional values)" : null, phase: (st) => st && st.status === "open" },
     { fn: "resolve", label: "Resolve", role: "creator", phase: (st) => st && st.status === "open" },
     { fn: "void", label: "Void", tone: "warn", role: "creator", phase: (st) => st && st.status === "open", enabled: (st) => canVoid(st), why: () => "Cannot void a market with a definite YES/NO outcome; settle it instead" },
     { fn: "dispute", label: "Dispute", tone: "warn", fields: [ { key: "reason", label: "Reason", type: "text", placeholder: "Requesting re-review of the cited sources" } ], build: (v) => [v.reason || ""], phase: (st) => st && st.status === "resolved", validate: (v) => (v && v.reason && v.reason.trim().length > 0) ? null : "Enter a reason to dispute", enabled: (st, acct) => hasStake(st, acct) && disputeRounds(st) < 2, why: (st, acct) => !hasStake(st, acct) ? "Only a participant who staked this market can dispute" : disputeRounds(st) >= 2 ? "Dispute limit reached (max 2) for this market" : null },
